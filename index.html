@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRM System — 待確認問題單（可填寫）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    background: #f5f6f8; color: #2b2f36; padding: 32px; line-height: 1.65; font-size: 14.5px;
+  }
+  .page { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 21px; margin-bottom: 4px; }
+  .meta { color: #7a8190; font-size: 13px; margin-bottom: 14px; }
+  .toolbar {
+    background: #fff; border: 1px solid #dde2e9; border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 18px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .toolbar label { font-size: 13.5px; color: #555c68; }
+  .toolbar input {
+    border: 1px solid #c9d0da; border-radius: 6px; padding: 5px 10px;
+    font: inherit; font-size: 13.5px; width: 140px;
+  }
+  .toolbar button {
+    border: none; border-radius: 6px; padding: 7px 14px; font: inherit; font-size: 13.5px;
+    cursor: pointer; background: #3a6ea5; color: #fff;
+  }
+  .toolbar button.secondary { background: #e8ecf1; color: #2b2f36; }
+  .toolbar .hint { font-size: 12px; color: #9aa3af; flex-basis: 100%; }
+  .qcard {
+    background: #fff; border: 1px solid #dde2e9; border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 12px; page-break-inside: avoid;
+  }
+  .qhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .qid { color: #d93025; font-weight: bold; margin-right: 6px; }
+  .qtitle { font-weight: 600; }
+  .assign { color: #3a6ea5; font-size: 13.5px; white-space: nowrap; }
+  .assign input {
+    border: none; border-bottom: 1px solid #9aa3af; width: 110px;
+    font: inherit; font-size: 13.5px; color: #2b2f36; background: transparent; padding: 2px 4px;
+  }
+  .qcard ol { margin: 6px 0 4px 24px; }
+  .qcard ol li { margin-bottom: 2px; }
+  .ctx { color: #555c68; font-size: 13px; margin-top: 6px; }
+  textarea.ans {
+    width: 100%; min-height: 64px; margin-top: 10px; padding: 8px 10px;
+    border: 1px dashed #c9d0da; border-radius: 6px; font: inherit; font-size: 13.5px;
+    resize: vertical; background: #fbfcfe;
+  }
+  textarea.ans:focus { outline: none; border-color: #3a6ea5; border-style: solid; background: #fff; }
+  .savenote { font-size: 11.5px; color: #9aa3af; text-align: right; margin-top: 2px; }
+  @media print {
+    body { background: #fff; padding: 8px; font-size: 12.5px; }
+    .toolbar, .savenote { display: none; }
+    textarea.ans { min-height: 56px; border-color: #c9d0da; }
+  }
+  @media (max-width: 600px) {
+    body { padding: 14px 10px; }
+    .toolbar { padding: 10px 12px; }
+    .toolbar button { padding: 10px 14px; }
+    /* 16px 以上可避免 iOS 點輸入框時自動放大頁面 */
+    .toolbar input, .assign input, textarea.ans { font-size: 16px; }
+    textarea.ans { min-height: 88px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>PRM System 規格確認 — 待確認問題單（可填寫）</h1>
+  <div class="meta">2026-09-30 更新（點交照片的線上儲存與 NAS 存放位置 1 題已回覆移除；目前沒有待回覆的問題）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
+
+  <div class="toolbar">
+    <label>填寫人：<input id="writer" data-save="writer" placeholder="請輸入姓名"></label>
+    <button onclick="exportAnswers('copy')">複製全部回覆</button>
+    <button class="secondary" onclick="exportAnswers('download')">匯出回覆（下載檔案）</button>
+    <span class="hint">填寫內容會自動暫存在這台裝置的瀏覽器裡，關閉再開不會消失。填完請按「複製全部回覆」，貼到 LINE 或 email 傳回給發單人（電腦上也可改用「匯出回覆」下載檔案）。</span>
+  </div>
+  <div class="ctx" style="padding:16px 4px">目前沒有待回覆的問題，感謝大家協助回覆。</div>
+
+  <div class="savenote" id="savenote"></div>
+</div>
+
+<script>
+(function () {
+  var PREFIX = 'prm-questions:';
+  var fields = document.querySelectorAll('[data-save]');
+
+  // 還原暫存（「指派給」欄由發單人指定，一律以檔案內容為準，不還原暫存）
+  fields.forEach(function (el) {
+    if (el.dataset.save.indexOf('asg-') === 0) return;
+    try {
+      var v = localStorage.getItem(PREFIX + el.dataset.save);
+      if (v !== null) el.value = v;
+    } catch (e) { /* 無痕模式等情況下略過 */ }
+  });
+
+  // 輸入即暫存（指派欄唯讀，不需暫存）
+  fields.forEach(function (el) {
+    if (el.dataset.save.indexOf('asg-') === 0) return;
+    el.addEventListener('input', function () {
+      try {
+        localStorage.setItem(PREFIX + el.dataset.save, el.value);
+        var note = document.getElementById('savenote');
+        note.textContent = '已自動暫存 ' + new Date().toLocaleTimeString('zh-TW');
+      } catch (e) { /* 略過 */ }
+    });
+  });
+
+  window.exportAnswers = function (mode) {
+    var writer = document.getElementById('writer').value.trim();
+    var lines = [];
+    lines.push('PRM System 規格確認回覆');
+    lines.push('填寫人：' + (writer || '（未填）'));
+    lines.push('日期：' + new Date().toLocaleDateString('zh-TW'));
+    lines.push('');
+
+    var answered = 0;
+    document.querySelectorAll('.qcard').forEach(function (card) {
+      var ans = card.querySelector('textarea.ans').value.trim();
+      if (!ans) return;
+      answered++;
+      lines.push('【' + card.dataset.q + '】' + card.dataset.title);
+      lines.push(ans);
+      lines.push('');
+    });
+
+    if (answered === 0) {
+      alert('尚未填寫任何回覆。');
+      return;
+    }
+    var text = lines.join('\n');
+
+    if (mode === 'copy') {
+      var done = function () { alert('已複製 ' + answered + ' 題回覆，請貼到 LINE 或 email 傳回。'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+      } else {
+        fallbackCopy(text); done();
+      }
+    } else {
+      var name = 'PRM回覆_' + (writer || '未具名') + '_' + new Date().toISOString().slice(0, 10) + '.txt';
+      var blob = new Blob(['﻿' + text], { type: 'text/plain;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      alert('已下載「' + name + '」（共 ' + answered + ' 題），請將檔案傳回給發單人。');
+    }
+  };
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+})();
+</script>
+</body>
+</html>

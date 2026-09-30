@@ -1,0 +1,1628 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>包租管理｜試用版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<!--
+  PRM 包租管理系統：可操作原型（拋棄式，不是正式系統的程式碼）
+  - 依據 docs/tech/04-ui-design.md（D-079、D-080）與 docs/specs/ 的規則；主色暫定松綠
+  - 全部假資料；操作只存在各自瀏覽器（localStorage），可按「重設試用資料」回到初始狀態
+  - 日期固定為 115/10/05（一），讓每個人看到同樣的待辦
+-->
+<style>
+:root{color-scheme:light;
+  --bg:#F7F3EC;--card:#FFFDF9;--side:#EFE8DD;--line:#E5DDD0;--line2:#EDE6DA;--line3:#F3EEE6;
+  --text:#2F2A25;--text2:#6B6158;--text3:#8A7F74;--ink2:#4A423B;
+  --accent:#3F6B5C;--accent-d:#2E5044;--accent-s:#E3ECE6;
+  --red:#B3261E;--red-s:#FBE9E6;--amber:#8A5A00;--amber-s:#FBF0D9;--gray-s:#F0EBE3;
+  --s-rent:#8B7F72;--s-list:#5E8FB3;--s-prep:#CDBB9E;--s-spec:#9C7AA0;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Noto Sans TC',system-ui,sans-serif;font-size:16px;line-height:1.5}
+a{color:var(--accent-d)}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+.serif{font-family:'Noto Serif TC',serif}
+.muted{color:var(--text2)}
+.small{font-size:14px}
+.num{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+h1,h2,h3,p{margin:0}
+
+/* 試用版提示列 */
+.banner{position:sticky;top:0;z-index:40;background:var(--amber-s);color:#6B4500;font-size:13px;padding:6px 16px;display:flex;gap:10px 14px;align-items:center;justify-content:center;flex-wrap:wrap;border-bottom:1px solid #EFDDB6}
+.banner b{font-weight:700}
+.banner button{height:30px;padding:0 10px;border-radius:8px;border:1px solid #C9A462;background:#FFFDF9;color:#6B4500;font-size:13px;cursor:pointer}
+
+.shell{display:flex;align-items:flex-start}
+.side{width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--line);padding:24px 16px;display:flex;flex-direction:column;gap:24px;position:sticky;top:43px;height:calc(100vh - 43px);overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand-mark{width:36px;height:36px;border-radius:10px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+.brand b{font-family:'Noto Serif TC',serif;font-size:19px;letter-spacing:1px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;text-decoration:none;color:var(--ink2);font-size:15px}
+.nav a:hover{background:#E8E0D3}
+.nav a[aria-current=page]{background:var(--accent-s);color:var(--accent-d);font-weight:700}
+.side-foot{margin-top:auto;border-top:1px solid #E0D6C8;padding-top:16px;display:flex;flex-direction:column;gap:10px}
+.role{display:flex;flex-direction:column;gap:6px;padding:0 8px;font-size:13px;color:var(--text2)}
+.role select{height:40px;border-radius:10px;border:1px solid #DCD2C3;background:var(--card);padding:0 10px;font-size:15px}
+
+main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
+.tabbar{display:none}
+
+/* 頁首 */
+.phead{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:24px}
+.phead h1{font-size:30px;font-weight:700}
+.phead p{margin-top:6px;font-size:15px}
+.phead-r{display:flex;align-items:center;gap:12px}
+.backlink{display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-size:15px;margin-bottom:10px;min-height:32px}
+
+/* 搜尋 */
+.sbox{position:relative;width:440px}
+.sbox>svg{position:absolute;left:15px;top:14px;color:var(--text3);pointer-events:none}
+.sbox input{width:100%;height:48px;padding:0 16px 0 46px;border-radius:12px;border:1px solid #DCD2C3;background:var(--card);font-size:15px}
+.sbox input:focus,.fld input:focus,.fld select:focus,.fld textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.sdrop{position:absolute;top:54px;left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(60,40,20,.12);z-index:20;max-height:420px;overflow:auto;padding:6px}
+.sres{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;text-decoration:none;color:var(--text);min-height:44px}
+.sres:hover,.sres:focus{background:var(--gray-s)}
+.sres .lmain{min-width:0}
+.sres .lmain small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snone{padding:12px;color:var(--text2);font-size:14px}
+/* 首頁大搜尋欄（單元管理主要入口） */
+.hsearch{gap:10px}
+.hsearch h2{font-size:21px;font-weight:700}
+.hsearch .sbox{width:100%;max-width:760px}
+.hsearch .sbox>svg{left:18px;top:17px}
+.hsearch .sbox input{height:56px;padding-left:52px;font-size:17px;border-color:var(--accent);box-shadow:0 1px 3px rgba(63,107,92,.12)}
+.hsearch .sdrop{top:62px}
+
+/* 區塊與卡片 */
+.sec{display:flex;flex-direction:column;gap:14px;margin-bottom:28px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sec-h h2{font-size:21px;font-weight:700}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--text2);flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:5px;display:inline-block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(80,60,40,.05)}
+.pad{padding:20px 22px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.acard{padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.acard-h{display:flex;align-items:center;gap:10px}
+.acard-h h3{font-size:16px;font-weight:500;flex:1}
+.acount{display:flex;align-items:baseline;gap:6px}
+.acount b{font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.acount span{color:var(--text2);font-size:15px}
+.adetail{font-size:14px;color:var(--ink2);line-height:1.6}
+.more{font-size:14px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:4px;min-height:32px}
+.badge{border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.b-red{background:var(--red-s);color:var(--red)}
+.b-amber{background:var(--amber-s);color:var(--amber)}
+.b-gray{background:var(--gray-s);color:var(--text2)}
+.tag{font-size:12px;padding:3px 8px;border-radius:6px;background:var(--accent-s);color:var(--accent-d);white-space:nowrap}
+.empty{padding:28px;text-align:center;color:var(--text2);background:var(--card);border:1px dashed var(--line);border-radius:14px}
+
+/* 例行作業 */
+.task-h{display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.task-h h2{font-size:21px;font-weight:700}
+.bar{width:160px;height:8px;border-radius:4px;background:var(--line2);overflow:hidden;display:flex}
+.bar span{background:var(--accent)}
+.tasks{gap:10px 24px}
+.task{display:flex;align-items:center;gap:12px;min-height:48px;cursor:pointer}
+.task input{width:22px;height:22px;accent-color:var(--accent);flex-shrink:0}
+.task span{display:flex;flex-direction:column}
+.task b{font-weight:400;font-size:15px}
+.task small{font-size:13px;color:var(--text2)}
+
+/* 狀態標籤 */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:3px 10px;border-radius:8px;white-space:nowrap}
+.chip i{width:8px;height:8px;border-radius:4px;display:inline-block}
+.c-rent{background:#ECE7E1;color:#574D43}.c-rent i{background:var(--s-rent)}
+.c-list{background:#E6EEF4;color:#3B5A70}.c-list i{background:var(--s-list)}
+.c-prep{background:#F3EDE3;color:#574D43}.c-prep i{background:var(--s-prep)}
+.c-spec{background:#F1EAF1;color:#5E4462}.c-spec i{background:var(--s-spec)}
+.pill{font-size:13px;padding:3px 9px;border-radius:7px;white-space:nowrap;display:inline-block}
+.p-red{background:var(--red-s);color:var(--red)}
+.p-amber{background:var(--amber-s);color:var(--amber)}
+.p-gray{background:var(--gray-s);color:var(--text2)}
+.p-ok{background:var(--accent-s);color:var(--accent-d)}
+
+/* 表格 */
+.tblwrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:15px}
+.tbl th{font-size:13px;color:var(--text2);font-weight:400;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.tbl td{padding:10px 10px;border-bottom:1px solid var(--line3);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .r{text-align:right}
+.tbl a.rowlink{text-decoration:none;color:var(--text);font-weight:500}
+.tbl tr.click{cursor:pointer}
+.tbl tr.click:hover td{background:#FAF6F0}
+.distbar{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;min-width:160px}
+.distbar span{display:block}
+
+/* 按鈕 */
+.btn{height:44px;padding:0 18px;border-radius:10px;border:1px solid transparent;cursor:pointer;font-size:15px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;white-space:nowrap}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-d)}
+.btn.outline{background:var(--card);border-color:var(--accent);color:var(--accent-d)}
+.btn.ghost{background:transparent;border-color:#DCD2C3;color:var(--ink2)}
+.btn.sm{height:36px;padding:0 12px;font-size:14px}
+.btn:disabled,.btn:disabled:hover{background:#E3DCD1;border-color:#E3DCD1;color:#8A7F74;cursor:not-allowed}
+.chipbtn{height:44px;padding:0 16px;border-radius:22px;border:1px solid #DCD2C3;background:var(--card);cursor:pointer;font-size:14px;color:var(--ink2)}
+.chipbtn:disabled{background:#EFE9E0;color:#9A8F84;cursor:not-allowed;border-style:dashed}
+.prog{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;align-items:center;gap:24px}
+.acts3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.actchips{display:flex;flex-wrap:wrap;gap:8px}
+.why{font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:4px}
+.why b{color:var(--ink2);font-weight:500}
+
+/* 單戶頁 */
+.upage{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding:4px 0}
+.kv>span:first-child{color:var(--text2)}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.fact span{font-size:13px;color:var(--text2)}
+.fact b{font-weight:500;font-variant-numeric:tabular-nums}
+.h2s{font-size:18px;font-weight:700}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.steps li{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;text-align:center;color:var(--ink2)}
+.steps i{width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px}
+.steps .done i{background:var(--accent);color:#fff}
+.steps .now i{border:2px solid var(--accent);color:var(--accent-d);background:var(--card)}
+.steps .now{color:var(--accent-d);font-weight:700}
+.steps .todo i{border:2px solid #CFC4B4;color:var(--text3)}
+.check{display:flex;align-items:center;gap:10px;font-size:15px;min-height:40px}
+.check .ok{color:var(--accent)}
+.warnbox{display:flex;gap:10px;background:var(--amber-s);border-radius:12px;padding:12px;font-size:15px;align-items:flex-start}
+.warnbox>svg{color:var(--amber);flex-shrink:0;margin-top:2px}
+.recs{display:flex;flex-direction:column}
+.rec{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:9px 0;border-bottom:1px solid var(--line3)}
+.rec:last-child{border-bottom:none}
+
+/* 清單列（手機與待辦清單） */
+.list{display:flex;flex-direction:column}
+.lrow{display:flex;align-items:center;gap:12px;padding:13px 14px;text-decoration:none;color:var(--text);border-bottom:1px solid var(--line3);min-height:56px}
+.lrow:last-child{border-bottom:none}
+.lmain{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.lmain b{font-weight:500;font-size:15px}
+.lmain small{font-size:13px;color:var(--text2)}
+.lrow .num{font-weight:700;font-size:17px}
+.lrow>svg:last-child{color:#A39889;flex-shrink:0}
+.todo-row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line3);flex-wrap:wrap}
+.todo-row:last-child{border-bottom:none}
+.todo-row .lmain{min-width:200px}
+.todo-row .acts{display:flex;gap:8px;flex-wrap:wrap}
+.rule{font-size:14px;color:var(--text2);background:var(--gray-s);border-radius:10px;padding:10px 14px;margin-bottom:16px;line-height:1.6}
+
+/* 分頁籤 */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+.tabs a{height:44px;padding:0 16px;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text2);border-bottom:3px solid transparent;white-space:nowrap;font-size:15px}
+.tabs a[aria-current=page]{color:var(--accent-d);border-bottom-color:var(--accent);font-weight:700}
+.filt{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filt a{height:36px;padding:0 14px;border-radius:18px;border:1px solid #DCD2C3;background:var(--card);display:flex;align-items:center;text-decoration:none;color:var(--ink2);font-size:14px}
+.filt a[aria-current=page]{background:var(--accent-s);border-color:var(--accent);color:var(--accent-d);font-weight:700}
+
+/* 手機 */
+.mhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mhead h1{font-size:25px}
+.avatar{width:40px;height:40px;border-radius:20px;background:#D9CDBB;color:var(--ink2);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+.quick3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 20px}
+.quick3 button{height:78px;border-radius:14px;border:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:15px;cursor:pointer}
+.quick3 button svg{color:var(--accent)}
+.mtop{display:none}
+
+/* 對話框 */
+.scrim{position:fixed;inset:0;background:rgba(47,42,37,.38);z-index:50}
+.modal{position:fixed;z-index:51;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 40px);overflow:auto;background:var(--card);border-radius:16px;padding:22px 22px 18px;box-shadow:0 16px 48px rgba(40,30,20,.25)}
+.modal h2{font-family:'Noto Serif TC',serif;font-size:21px;margin-bottom:6px}
+.modal .msub{font-size:14px;color:var(--text2);margin-bottom:12px}
+.fld{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.fld>span{font-size:14px;color:var(--ink2);font-weight:500}
+.fld input,.fld select,.fld textarea{height:46px;border-radius:10px;border:1px solid #DCD2C3;background:#fff;padding:0 12px;font-size:16px}
+.fld textarea{height:88px;padding:10px 12px;resize:vertical}
+.fld small{font-size:13px;color:var(--text2)}
+.lfbox{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;display:flex;flex-direction:column;gap:6px;background:var(--card)}
+.fld.inline{flex-direction:row;align-items:center;gap:10px}
+.fld.inline input{width:22px;height:22px;accent-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2 .fld{margin:6px 0}
+.err{color:var(--red);font-size:14px;min-height:20px;margin-top:4px}
+.mact{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+.plist{display:flex;flex-direction:column;max-height:50vh;overflow:auto;margin-top:8px;border:1px solid var(--line3);border-radius:10px}
+.bigbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.bigbtns button{height:84px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:15px;cursor:pointer}
+.bigbtns button svg{color:var(--accent)}
+
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#2F2A25;color:#FFFDF9;padding:12px 18px;border-radius:12px;font-size:15px;z-index:60;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+
+@media (max-width:1180px){ .grid3{grid-template-columns:repeat(2,minmax(0,1fr))} .sbox{width:360px} }
+@media (max-width:899px){
+  .side{display:none}
+  main{padding:14px 16px 100px}
+  .only-desk{display:none!important}
+  .mtop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+  .mtop a.icon{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+  .phead{margin-bottom:16px;align-items:flex-start;flex-direction:column;gap:10px}
+  .phead h1{font-size:25px}
+  .phead-r{width:100%}
+  .phead-r .btn{width:100%}
+  .grid3,.upage{grid-template-columns:minmax(0,1fr)}
+  .prog{grid-template-columns:1fr 1fr;gap:14px}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+  .prog>.col{grid-column:1/-1}
+  .tabbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;height:70px;background:var(--card);border-top:1px solid var(--line);z-index:30;align-items:center;padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar a,.tabbar button{display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:var(--text2);font-size:12px;background:none;border:none;cursor:pointer;height:100%;justify-content:center}
+  .tabbar [aria-current=page]{color:var(--accent-d);font-weight:700}
+  .tabbar .plus{width:36px;height:36px;border-radius:18px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+  .hide-mob{display:none}
+  .banner{padding:5px 12px;font-size:12px;flex-wrap:nowrap;justify-content:space-between}
+  .banner button{height:28px;padding:0 8px;font-size:12px;flex-shrink:0}
+  .tbl{font-size:14px}
+  .tbl td,.tbl th{padding:9px 6px}
+  .todo-row{padding:12px 14px}
+  .toast{bottom:86px}
+}
+@media (min-width:900px){ .only-mob{display:none!important} }
+</style>
+</head>
+<body>
+<div class="banner" role="note"><span><b>試用版</b>・全部為虛構資料，請勿輸入真實姓名、電話</span><span class="hide-mob">操作紀錄僅存於本裝置｜日期固定為 115/10/05</span><button type="button" data-act="reset">重設試用資料</button></div>
+<div class="shell">
+  <nav class="side" id="side" aria-label="主選單"></nav>
+  <main id="main"></main>
+</div>
+<nav class="tabbar" id="tabbar" aria-label="主選單"></nav>
+<div id="modal-root"></div>
+<div id="toast-root" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ================= 基本工具 ================= */
+var TODAY = '2026-10-05';
+var KEY = 'prm-prototype-v10';
+var S = null;
+var $ = function (sel) { return document.querySelector(sel); };
+
+function D(s) { return new Date(s + 'T00:00:00Z'); }
+function iso(dt) { return dt.toISOString().slice(0, 10); }
+function addDays(s, n) { var t = D(s); t.setUTCDate(t.getUTCDate() + n); return iso(t); }
+function addMonths(s, n) { var t = D(s); var d = t.getUTCDate(); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() + n); var last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); t.setUTCDate(Math.min(d, last)); return iso(t); }
+function diff(a, b) { return Math.round((D(b) - D(a)) / 864e5); } /* b − a 天數 */
+function fullMonths(a, b) { var n = 0; while (addMonths(a, n + 1) <= addDays(b, 1)) n++; return n; }
+var WD = '日一二三四五六';
+function roc(s) { if (!s) return '—'; var p = s.split('-'); return (+p[0] - 1911) + '/' + p[1] + '/' + p[2]; }
+function rocW(s) { return roc(s) + '（' + WD[D(s).getUTCDay()] + '）'; }
+function rocM(m) { var p = m.split('-'); return (+p[0] - 1911) + '/' + p[1]; }
+function addWorkdays(s, n) { var t = s; while (n > 0) { t = addDays(t, 1); var w = D(t).getUTCDay(); if (w !== 0 && w !== 6) n--; } return t; }
+function parseRoc(v) {
+  v = String(v || '').trim().replace(/[.\-年月]/g, '/').replace(/日$/, '');
+  var y, m, d, mm;
+  if (/^\d{7}$/.test(v)) { y = +v.slice(0, 3); m = +v.slice(3, 5); d = +v.slice(5); }
+  else if ((mm = v.match(/^(\d{2,4})\/(\d{1,2})\/(\d{1,2})$/))) { y = +mm[1]; m = +mm[2]; d = +mm[3]; }
+  else return null;
+  if (y < 1000) y += 1911;
+  var s = y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  var t = D(s); if (isNaN(t) || iso(t) !== s) return null; return s;
+}
+function money(n) { return 'NT$ ' + Math.round(n).toLocaleString('en-US'); }
+function num(n) { return Math.round(n).toLocaleString('en-US'); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function uid(p) { S.seq = (S.seq || 1000) + 1; return p + S.seq; }
+function sum(a, f) { return a.reduce(function (x, y) { return x + (f ? f(y) : y); }, 0); }
+function first(a, f) { return a.filter(f)[0]; }
+
+var ICONS = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  building: '<path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3"/>',
+  wallet: '<path d="M3 7a2 2 0 0 1 2-2h13v4M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zM16 14.5h.01"/>',
+  wrench: '<path d="M15 5a4 4 0 0 0 4.9 4.9L11 18.8a2 2 0 1 1-2.8-2.8L17.1 7.1A4 4 0 0 0 15 5z"/>',
+  file: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M9 14l2 2 4-4"/>',
+  chart: '<path d="M4 20V11M10 20V5M16 20v-7M21 20H3"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+  chev: '<path d="m9 6 6 6-6 6"/>',
+  back: '<path d="m15 6-6 6 6 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5A8 8 0 1 1 21 12z"/>',
+  status: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="m9 14 2 2 4-4"/>',
+  coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.2 0-2.2-.6-2.6-1.6M12 6.5V8M12 16v1.5"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 5v16M8 7h7"/>'
+};
+function ic(n, s, w) { s = s || 20; return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (w || 1.8) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[n] + '</svg>'; }
+function sevBadge(sev, size) { size = size || 34; var n = sev === 'red' ? 'alert' : sev === 'amber' ? 'clock' : 'list'; return '<span class="badge b-' + sev + '" style="width:' + size + 'px;height:' + size + 'px">' + ic(n, Math.round(size * 0.55), 2) + '</span>'; }
+var SC = { '已出租': 'rent', '招租中': 'list', '整備中': 'prep', '特殊狀況': 'spec' };
+function chip(st) { return '<span class="chip c-' + SC[st] + '"><i></i>' + st + '</span>'; }
+
+/* ================= 假資料 ================= */
+function seed() {
+  var sd = 20261005;
+  function r() { sd = (sd * 1103515245 + 12345) % 2147483648; return sd / 2147483648; }
+  function pick(a) { return a[Math.floor(r() * a.length)]; }
+  var SUR = '林陳王張李黃吳劉蔡楊許鄭謝郭洪曾邱廖賴周徐何江蘇葉'.split('');
+  function name() { return pick(SUR) + (r() < 0.5 ? '先生' : '小姐'); }
+  function phone() { return '09xx-xxx-' + (Math.floor(r() * 900) + 100); }
+  var st = { v: 2, role: 'admin', seq: 1000, noticeNo: 16, breachNo: 3, cases: [], contracts: [], houses: [], units: [], leases: [], receivables: [], payments: [], reservations: [], filings: [], settlements: [], maint: [], payables: [], notices: [], contacts: [], tasks: [], parking: [], suspense: [], calPending: [], calEvents: [], settingLog: [], util: null, utilDone: false };
+  st.cases = [
+    { id: 'c1', name: '河岸大樓', short: '河岸', officer: '河岸專案承辦' },
+    { id: 'c2', name: '和平街 15 戶', short: '和平街', officer: '和平專案承辦' },
+    { id: 'c3', name: '青田街', short: '青田街', officer: '—' },
+    { id: 'c4', name: '松園', short: '松園', officer: '—' },
+    { id: 'c5', name: '港墘', short: '港墘', officer: '—' },
+    /* 河濱新城：同一社區（一個案場）底下三個案件——模仿「一個社區、公司與業主簽多份上層合約」（D-109、D-110） */
+    { id: 'c6', name: '河濱新城 10 戶', short: '河濱 10', officer: '河濱專案承辦' },
+    { id: 'c7', name: '河濱新城 12 戶', short: '河濱 12', officer: '河濱專案承辦' },
+    { id: 'c8', name: '河濱新城 移轉 3 戶', short: '河濱移轉', officer: '—' }
+  ];
+  st.contracts = [
+    { id: 'k1', caseId: 'c1', no: 'HA-01', name: '河岸大樓住宅包租契約（原約，A 棟）', acquire: '政府標案', lessor: '產權機關（河岸）', govNo: 'BFA-0000-01（試用）', start: '2021-07-01', end: '2029-06-30', free: ['2021-07-01', '2021-09-30'],
+      segments: [{ from: '2021-07-01', to: '2026-06-30', rent: 260200, reason: '決標租金', doc: '契約第三條' }, { from: '2026-07-01', to: null, rent: 268000, reason: '房租指數調整（漲幅 3.0%，第 6 年起限調 1 次，已用）', doc: '產權機關公文（試用）115/06/12' }],
+      pay: '月繳｜每月 10 日｜EDI 匯款', bond: '履約保證金 NT$ 1,561,200', options: '續租（期滿前 6 個月申請）；擴充（累計不逾原面積 50%，已用 18%）', report: '每月 10 日前送轉租紀錄／住戶清冊（含溢價率）', adjust: '臺北市房租指數，漲幅達 3% 才調；未逾 5 年不調、第 6 年起租期內限 1 次', insurance: '火險保額 NT$ 30,000,000｜115/07/01–116/06/30', notary: '否' },
+    { id: 'k2', caseId: 'c1', no: 'HA-02', name: '河岸大樓擴充補充協議（B 棟）', acquire: '政府標案（擴充）', lessor: '產權機關（河岸）', govNo: 'BFA-0000-01（試用）', start: '2023-03-01', end: '2029-06-30', free: ['2023-03-01', '2023-04-30'],
+      segments: [{ from: '2023-03-01', to: null, rent: 18000, reason: '補充協議租金', doc: '補充協議第二條' }],
+      pay: '月繳｜每月 10 日｜EDI 匯款（併原約）', bond: '併原約履約保證金', options: '依原約', report: '併原約月報', adjust: '依原約', insurance: '併原約', notary: '否' },
+    { id: 'k3', caseId: 'c2', no: 'HP-01', name: '和平街住宅包租契約（15 戶）', acquire: '政府標案', lessor: '產權機關（和平）', govNo: 'BFA-0000-02（試用）', start: '2022-08-01', end: '2028-12-31', free: ['2022-08-01', '2022-10-31'],
+      segments: [{ from: '2022-08-01', to: '2025-12-31', rent: 160000, reason: '決標租金', doc: '契約第四條' }, { from: '2026-01-01', to: null, rent: 165000, reason: '房租指數調整（漲幅 3.1%，第 2 年起不限次數）', doc: '產權機關公文（試用）114/12/20' }],
+      pay: '季繳（2、5、8、11 月）｜16 日｜公庫帳號', bond: '履約保證金 NT$ 960,000', options: '續租', report: '無月報條款', adjust: '臺北市房租指數，漲幅達 3% 才調；第 2 年起不限次數，比較基準滾動', insurance: '火險保額 NT$ 12,000,000', notary: '是' },
+    { id: 'k4', caseId: 'c3', no: 'QT-01', name: '青田街房屋租賃契約', acquire: '私人房東', lessor: '房東 周先生', govNo: '—', start: '2024-09-01', end: '2027-08-31', free: null,
+      segments: [{ from: '2024-09-01', to: null, rent: 60000, reason: '約定租金', doc: '契約第三條' }],
+      pay: '月繳｜每月 15 日｜匯款', bond: '押金 NT$ 120,000', options: '無', report: '無', adjust: '租期內不調整', insurance: '—', notary: '否' },
+    { id: 'k5', caseId: 'c4', no: 'SY-01', name: '松園包租契約', acquire: '私人房東', lessor: '房東 邱小姐', govNo: '—', start: '2022-04-01', end: '2027-03-31', free: ['2022-04-01', '2022-04-30'],
+      segments: [{ from: '2022-04-01', to: null, rent: 72000, reason: '約定租金', doc: '契約第三條' }],
+      pay: '月繳｜每月 3 日｜支票（已開至 115/12）', bond: '押金 NT$ 144,000', options: '續租（雙方合意）', report: '無', adjust: '租期內不調整', insurance: '—', notary: '否' },
+    { id: 'k6', caseId: 'c5', no: 'GQ-01', name: '港墘房屋租賃契約（承接原承租人）', acquire: '租賃移轉', lessor: '房東 廖先生', govNo: '—', start: '2024-03-01', end: '2028-02-29', free: null,
+      segments: [{ from: '2024-03-01', to: null, rent: 40000, reason: '沿用原約租金；新型移轉不適用遞減優惠', doc: '移轉協議' }],
+      pay: '月繳｜每月 20 日｜匯款', bond: '押金 NT$ 80,000（承接）', options: '無', report: '無', adjust: '租期內不調整', insurance: '—', notary: '否' },
+    { id: 'k7', caseId: 'c6', no: 'HB-01', name: '河濱新城住宅包租契約（10 戶，東棟）', acquire: '政府標案', lessor: '產權機關（河濱）', govNo: 'BFA-0000-06（試用）', start: '2020-11-01', end: '2027-10-31', free: ['2020-11-01', '2021-01-31'],
+      segments: [{ from: '2020-11-01', to: '2025-10-31', rent: 118000, reason: '決標租金', doc: '契約第三條' }, { from: '2025-11-01', to: null, rent: 121600, reason: '房租指數調整（漲幅 3.05%，第 6 年起限調 1 次，已用）', doc: '產權機關公文（試用）114/10/20' }],
+      pay: '月繳｜每月 10 日｜EDI 匯款', bond: '履約保證金 NT$ 708,000', options: '續租；擴充（累計不逾原面積 50%，已用 20%）', report: '每月 10 日前送轉租紀錄／住戶清冊', adjust: '臺北市房租指數，漲幅達 3% 才調；未逾 5 年不調、第 6 年起限 1 次', insurance: '火險保額 NT$ 15,000,000', notary: '是' },
+    { id: 'k8', caseId: 'c6', no: 'HB-02', name: '河濱新城擴充補充協議（2 戶，西棟）', acquire: '政府標案（擴充）', lessor: '產權機關（河濱）', govNo: 'BFA-0000-06（試用）', start: '2024-05-01', end: '2027-10-31', free: ['2024-05-01', '2024-05-31'],
+      segments: [{ from: '2024-05-01', to: null, rent: 24000, reason: '補充協議租金', doc: '補充協議第二條' }],
+      pay: '月繳｜每月 10 日｜EDI 匯款（併原約）', bond: '併原約履約保證金', options: '依原約', report: '併原約月報', adjust: '依原約', insurance: '併原約', notary: '否' },
+    { id: 'k9', caseId: 'c7', no: 'HB-10', name: '河濱新城住宅包租契約（12 戶，西棟）', acquire: '政府標案', lessor: '產權機關（河濱）', govNo: 'BFA-0000-09（試用）', start: '2023-02-01', end: '2031-07-31', free: ['2023-02-01', '2023-04-30'],
+      segments: [{ from: '2023-02-01', to: null, rent: 150000, reason: '決標租金', doc: '契約第三條' }],
+      pay: '季繳（1、4、7、10 月）｜5 日｜公庫帳號', bond: '履約保證金 NT$ 900,000', options: '續租', report: '每月 10 日前送轉租紀錄／住戶清冊', adjust: '臺北市房租指數，漲幅達 3% 才調；第 2 年起不限次數', insurance: '火險保額 NT$ 18,000,000', notary: '是' },
+    { id: 'k10', caseId: 'c8', no: 'HB-T1', name: '河濱新城房屋租賃契約（承接原承租人，3 戶）', acquire: '租賃移轉', lessor: '房東 韓先生', govNo: '—', start: '2025-06-01', end: '2028-05-31', free: null,
+      segments: [{ from: '2025-06-01', to: null, rent: 36000, reason: '沿用原約租金；原約遞減優惠取消（D-007）', doc: '移轉協議' }],
+      pay: '月繳｜每月 25 日｜匯款', bond: '押金 NT$ 72,000（承接）', options: '無', report: '無', adjust: '租期內不調整', insurance: '—', notary: '否' }
+  ];
+  var un = 0, hn = 0;
+  function house(c, k, addr, floor, ping, join) { var h = { id: 'h' + (++hn), caseId: c, contractId: k, addr: addr, floor: floor, ping: ping, join: join, buildNo: '0' + (1200 + hn) + '-000', water: 'W-' + (330000 + hn * 7), elec: 'E-' + (18000000 + hn * 13), gas: c === 'c2' ? 'G-' + (5000 + hn) : '—', mgmt: ['c1', 'c6', 'c7', 'c8'].indexOf(c) >= 0 ? Math.floor(ping * 60) : 0, fire: Math.round(ping * 50000), land: [{ sec: C0(c) + '段一小段', no: String(100 + hn).padStart(4, '0') + '-0000', area: Math.round(300 + r() * 500), share: '1/' + (40 + Math.floor(r() * 60)) }] }; if (r() < 0.2) h.land.push({ sec: C0(c) + '段一小段', no: String(100 + hn).padStart(4, '0') + '-0001', area: Math.round(50 + r() * 100), share: '1/' + (40 + Math.floor(r() * 60)) }); st.houses.push(h); return h; }
+  function C0(c) { return { c1: '河岸', c2: '和平', c3: '青田', c4: '松園', c5: '港墘', c6: '河濱', c7: '河濱', c8: '河濱' }[c]; }
+  function add(c, code, bld, aliases, type, price, h) { st.units.push({ id: 'u' + (++un), caseId: c, houseId: h.id, code: code, building: bld, aliases: aliases, type: type, listPrice: price, status: '已出租', statusSince: '2026-01-01', note: '' }); }
+  var f, i;
+  for (f = 5; f <= 12; f++) [3, 6, 8].forEach(function (k) { add('c1', 'A-' + f + '-' + k, 'A 棟 ' + f + ' 樓', [f + '-' + k, 'A' + f + '-' + k], '獨立套房', 12000 + (f - 5) * 400 + (k === 8 ? 1000 : 0), house('c1', 'k1', '河岸路 100 號 ' + f + ' 樓之 ' + k, f, 9 + (k === 8 ? 3 : 0), '2021-07-01')); });
+  for (f = 5; f <= 10; f++) [1, 2].forEach(function (k) { add('c1', 'B-' + f + '-' + k, 'B 棟 ' + f + ' 樓', [f + '-' + k, 'B' + f + '-' + k], '獨立套房', 13000 + (f - 5) * 300, house('c1', 'k2', '河岸路 102 號 ' + f + ' 樓之 ' + k, f, 10, '2023-03-01')); });
+  for (i = 1; i <= 15; i++) add('c2', i + '號', '', ['和平' + i], '家庭房', 11000 + (i % 4) * 500, house('c2', 'k3', '和平街 ' + (10 + i) + ' 巷 ' + (i % 5 + 1) + ' 號 ' + (i % 4 + 2) + ' 樓', i % 4 + 2, 18 + (i % 5) * 3, '2022-08-01'));
+  var qh = [house('c3', 'k4', '青田街 8 號 2 樓', 2, 32, '2024-09-01'), house('c3', 'k4', '青田街 8 號 3 樓', 3, 32, '2024-09-01'), house('c3', 'k4', '青田街 10 號 2 樓', 2, 30, '2024-09-01')];
+  for (i = 1; i <= 12; i++) add('c3', i + '號房', qh[Math.floor((i - 1) / 4)].floor + ' 樓', ['青田' + i], '分租套房', 9000 + (i % 3) * 1000, qh[Math.floor((i - 1) / 4)]);
+  [1, 2, 3, 4].forEach(function (fl) { ['A', 'B'].forEach(function (k) { add('c4', fl + 'F-' + k, fl + ' 樓', ['松園' + fl + 'F-' + k, '松園' + fl + k], '獨立套房', 15000 + fl * 500, house('c4', 'k5', '松園路 36 號 ' + fl + ' 樓（' + k + ' 室）', fl, 14, '2022-04-01')); }); });
+  [3, 4, 5].forEach(function (fl) { ['A', 'B'].forEach(function (k) { add('c5', fl + 'F-' + k, fl + ' 樓', ['港墘' + fl + 'F-' + k, '港墘' + fl + k], '獨立套房', 13000, house('c5', 'k6', '港墘路 7 號 ' + fl + ' 樓之 ' + (k === 'A' ? 1 : 2), fl, 11, '2024-03-01')); }); });
+  /* 河濱新城：東棟（河濱路 88 號）＋西棟（河濱路 90 號）＝同一社區、一個案場；三個案件 */
+  for (f = 3; f <= 7; f++) [1, 2].forEach(function (k) { add('c6', 'E-' + f + '-' + k, '東棟 ' + f + ' 樓', ['河濱' + f + '-' + k, '河濱E' + f + '-' + k], '家庭房', 14000 + (f - 3) * 300, house('c6', 'k7', '河濱路 88 號 ' + f + ' 樓之 ' + k, f, 16, '2020-11-01')); });
+  [1, 2].forEach(function (k) { add('c6', 'W-3-' + k, '西棟 3 樓', ['河濱W3-' + k], '家庭房', 14500, house('c6', 'k8', '河濱路 90 號 3 樓之 ' + k, 3, 16, '2024-05-01')); });
+  for (f = 4; f <= 9; f++) [1, 2].forEach(function (k) { add('c7', 'W-' + f + '-' + k, '西棟 ' + f + ' 樓', ['河濱W' + f + '-' + k], '獨立套房', 12500 + (f - 4) * 200, house('c7', 'k9', '河濱路 90 號 ' + f + ' 樓之 ' + k, f, 11, '2023-02-01')); });
+  [1, 2, 3].forEach(function (k) { add('c8', 'E-10-' + k, '東棟 10 樓', ['河濱E10-' + k, '河濱移轉' + k], '獨立套房', 13000, house('c8', 'k10', '河濱路 88 號 10 樓之 ' + k, 10, 10, '2025-06-01')); });
+  function U(c, code) { return st.units.filter(function (u) { return u.caseId === c && u.code === code; })[0]; }
+  function setS(c, code, s, since, note) { var u = U(c, code); u.status = s; u.statusSince = since; u.note = note || ''; return u; }
+  [['c1', 'A-11-6', '2026-09-12'], ['c1', 'A-6-8', '2026-09-20'], ['c3', '5號房', '2026-09-05'], ['c3', '9號房', '2026-09-18'], ['c5', '3F-B', '2026-09-10'], ['c5', '4F-B', '2026-09-25'], ['c2', '12號', '2026-09-22']].forEach(function (a) { setS(a[0], a[1], '招租中', a[2]); });
+  [['c1', 'B-9-1', '2026-09-20'], ['c4', '3F-B', '2026-07-20'], ['c5', '5F-A', '2026-10-01'], ['c3', '2號房', '2026-09-30'], ['c2', '6號', '2026-09-15']].forEach(function (a) { setS(a[0], a[1], '整備中', a[2]); });
+  setS('c4', '4F-B', '特殊狀況', '2026-06-01', '留作公司自用（員工宿舍）');
+  setS('c7', 'W-6-2', '招租中', '2026-09-08'); setS('c7', 'W-9-1', '招租中', '2026-09-26'); setS('c8', 'E-10-3', '整備中', '2026-09-21'); setS('c6', 'E-5-1', '招租中', '2026-09-15');
+
+  var ln = 0;
+  function addYears(s, k) { return (+s.slice(0, 4) + k) + s.slice(4); }
+  function mkLease(u, o) {
+    o = o || {};
+    var start = o.start || ('20' + pick(['25-12', '26-01', '26-02', '26-03', '26-04', '26-05', '26-06', '26-07', '26-08', '26-09']) + '-01');
+    var l = { id: 'l' + (++ln), unitId: u.id, tenant: o.tenant || name(), phone: o.phone || phone(), start: start, end: o.end || addDays(addYears(start, 1), -1), rent: o.rent || u.listPrice, deposit: 0, deco: 0, dueDay: o.dueDay || pick([1, 1, 1, 5, 10]), renew: o.renew || '待詢問', residency: o.residency != null ? o.residency : r() < 0.2, signDate: o.signDate || addDays(start, -5), active: o.active != null ? o.active : true, source: '新租', nat: r() < 0.08 ? '外國' : '本國', lateFee: start >= '2026-01-01' ? true : r() < 0.5, occupants: u.caseId === 'c3' ? (r() < 0.25 ? 2 : 1) : null, parking: null, last5s: [String(10000 + Math.floor(r() * 89999))] };
+    l.deposit = l.rent * 2; l.deco = o.deco != null ? o.deco : (r() < 0.15 ? l.rent * 2 : 0);
+    var hh = st.houses.filter(function (h) { return h.id === u.houseId; })[0]; l.mgmt = hh && hh.mgmt ? hh.mgmt : 0;
+    l.mgmtMode = !l.mgmt ? '' : o.mgmtMode || (+u.id.replace(/\D/g, '') % 5 === 0 ? '含租金' : '另計');
+    l.guarantor = l.deco ? null : { name: name(), phone: r() < 0.9 ? phone() : '' };
+    l.docs = { addr: r() > 0.1, life: r() > 0.08, idT: r() > 0.1, idG: r() > 0.1, scan: r() > 0.12, efile: r() > 0.18, notary: false, photoIn: true };
+    if (l.active && !o.keepStatus) u.statusSince = start;
+    st.leases.push(l); return l;
+  }
+  var special = {};
+  special['c1|B-7-2'] = { start: '2026-03-01', dueDay: 1, mgmtMode: '另計' };
+  special['c1|A-12-3'] = { start: '2026-09-15', signDate: '2026-09-11', dueDay: 15 };
+  special['c3|7號房'] = { start: '2026-10-01', signDate: '2026-09-25', dueDay: 1 };
+  special['c1|A-9-8'] = { start: '2026-03-01', tenant: '林先生', dueDay: 1 };
+  special['c1|A-5-6'] = { start: '2026-02-01', dueDay: 1 };
+  [['c1', 'A-5-3', '待詢問'], ['c1', 'A-7-8', '待詢問'], ['c1', 'B-6-1', '待詢問'], ['c2', '2號', '待詢問'], ['c3', '4號房', '續約'], ['c4', '1F-A', '續約'], ['c5', '4F-A', '續約']].forEach(function (a) { special[a[0] + '|' + a[1]] = { start: '2025-11-01', renew: a[2] }; });
+  st.units.forEach(function (u) { if (u.status === '已出租') mkLease(u, special[u.caseId + '|' + u.code]); });
+  var q2 = U('c3', '2號房'), g5 = U('c5', '5F-A');
+  var lq2 = mkLease(q2, { start: '2025-10-01', end: '2026-09-30', tenant: '蘇小姐', rent: 10000, residency: false, active: false, keepStatus: true, deco: 0 });
+  var lg5 = mkLease(g5, { start: '2025-10-01', end: '2026-09-30', tenant: '張小姐', rent: 13000, residency: true, active: false, keepStatus: true, deco: 0 });
+
+  var rn = 0;
+  function rec(l, item, month, due, amount, paid) { st.receivables.push({ id: 'rv' + (++rn), leaseId: l.id, item: item, month: month, due: due, amount: amount, paid: paid }); }
+  function caseOfLease(l) { return st.units.filter(function (u) { return u.id === l.unitId; })[0].caseId; }
+  st.leases.filter(function (l) { return l.active; }).forEach(function (l) {
+    ['2026-08', '2026-09', '2026-10'].forEach(function (m) {
+      if (m < l.start.slice(0, 7)) return;
+      var due = m === l.start.slice(0, 7) ? l.start : m + '-' + String(l.dueDay).padStart(2, '0');
+      var paidFull = m !== '2026-10' ? true : (diff(due, TODAY) >= 0 && r() < 0.85);
+      rec(l, '租金', m, due, l.rent, paidFull ? l.rent : 0);
+      if (l.mgmtMode === '另計') rec(l, '管理費', m, due, l.mgmt, paidFull ? l.mgmt : 0);
+    });
+    if (l.start >= '2026-08-01') rec(l, '租約押金', l.start.slice(0, 7), l.start, l.deposit, l.deposit);
+  });
+  function leaseOf(c, code) { var u = U(c, code); return st.leases.filter(function (l) { return l.unitId === u.id && l.active; })[0]; }
+  function unpay(l, month, item, amt) { st.receivables.forEach(function (x) { if (x.leaseId === l.id && x.month === month && (!item || x.item === item)) x.paid = amt || 0; }); }
+  var b72 = leaseOf('c1', 'B-7-2'); unpay(b72, '2026-08'); unpay(b72, '2026-09'); unpay(b72, '2026-10'); b72.lateFee = true;
+  var h8 = leaseOf('c2', '8號'); unpay(h8, '2026-09', '租金'); h8.lateFee = false;
+  var a76 = leaseOf('c1', 'A-7-6'); unpay(a76, '2026-09'); a76.lateFee = true;
+  var s2a = leaseOf('c4', '2F-A'); rec(s2a, '水電費', '2026-09', '2026-09-25', 1800, 0);
+  var a56 = leaseOf('c1', 'A-5-6'); unpay(a56, '2026-10', '租金', 6000);
+  var a98 = leaseOf('c1', 'A-9-8'); st.receivables.forEach(function (x) { if (x.leaseId === a98.id) x.paid = x.amount; });
+  a98.guarantor = { name: '林太太', phone: '09xx-xxx-552' }; a98.deco = 0; a98.docs = { addr: true, life: true, idT: true, idG: true, scan: true, efile: true, notary: false, photoIn: true };
+  a98.parking = { space: 'B1-012', rent: 2000, separate: true };
+  b72.parking = { space: 'B1-021', rent: 0, separate: false };
+
+  /* 車位 */
+  st.parking = [
+    { id: 'pk1', caseId: 'c1', space: 'B1-012', floor: 'B1', area: 12.5, bind: '含在房屋包租契約內', houseId: U('c1', 'A-9-8').houseId, sublet: true, status: '已出租' },
+    { id: 'pk2', caseId: 'c1', space: 'B1-015', floor: 'B1', area: 12.5, bind: '獨立車位租賃契約', houseId: null, sublet: false, status: '閒置' },
+    { id: 'pk3', caseId: 'c1', space: 'B1-021', floor: 'B1', area: 11.8, bind: '含在房屋包租契約內', houseId: U('c1', 'B-7-2').houseId, sublet: true, status: '已出租' }
+  ];
+
+  /* 申報 */
+  var fn = 0;
+  function filing(l, type, status, extra) { var o = { id: 'f' + (++fn), leaseId: l.id, unitId: l.unitId, type: type, signDate: l.signDate, status: status, doneDate: null, receipt: '', reason: '' }; for (var k in extra || {}) o[k] = extra[k]; st.filings.push(o); }
+  var a123 = leaseOf('c1', 'A-12-3'), q7 = leaseOf('c3', '7號房');
+  a123.docs.photoIn = false; q7.docs.photoIn = false; /* 示範：點交照片尚未存 NAS（D-112） */
+  st.leases.forEach(function (l) {
+    if (!l.active || l.signDate < '2026-08-01') return;
+    if (l === a123 || l === q7) { filing(l, '實價登錄', '待辦'); filing(l, '地政司包租／轉租申報', '待辦'); return; }
+    filing(l, '實價登錄', '已辦', { doneDate: addDays(l.signDate, 12), receipt: '回執 ' + (1000 + fn) });
+    filing(l, '地政司包租／轉租申報', '已辦', { doneDate: addDays(l.signDate, 14), receipt: '回執 ' + (2000 + fn) });
+  });
+
+  /* 退租結算（10 個項次） */
+  st.settlements.push({ id: 's1', leaseId: lq2.id, unitId: q2.id, moveOutDate: '2026-09-30', refundItems: [], deductItems: [{ item: '清潔費', amount: 1500 }], utils: { water: 320, elec: 500, gas: 0 }, draftOk: '2026-09-30', signedDate: '2026-10-01', passbookDate: '2026-10-01', residency: false, movedOutDate: null, nameMatch: true, checks: { meter: true, settle: true, rename: true, keys: true }, refundedDate: null });
+  st.settlements.push({ id: 's2', leaseId: lg5.id, unitId: g5.id, moveOutDate: '2026-09-30', refundItems: [], deductItems: [{ item: '清潔費', amount: 2000 }, { item: '設備賠償（牆面修補）', amount: 1500 }], utils: { water: 280, elec: 650, gas: 120 }, draftOk: '2026-10-01', signedDate: '2026-10-02', passbookDate: '2026-10-02', residency: true, movedOutDate: null, nameMatch: true, checks: { meter: true, settle: true, rename: false, keys: true }, refundedDate: null });
+
+  st.reservations.push({ id: 'r1', unitId: U('c5', '3F-B').id, payer: '何小姐', phone: '09xx-xxx-416', amount: 6500, date: '2026-09-27', holdUntil: '2026-10-04', status: '保留中' });
+  st.reservations.push({ id: 'r2', unitId: U('c3', '9號房').id, payer: '江先生', phone: '09xx-xxx-273', amount: 4500, date: '2026-10-03', holdUntil: '2026-10-10', status: '保留中' });
+
+  st.notices.push({ id: 'n1', leaseId: b72.id, no: '115-存-009', kind: '存證信函—要求補足押金', created: '2026-09-08', status: '已確認' });
+  st.notices.push({ id: 'n2', leaseId: h8.id, no: '115-存-014', kind: '存證信函—要求補足押金', created: '2026-10-02', status: '待確認' });
+  st.notices.push({ id: 'n3', leaseId: a76.id, no: '115-存-015', kind: '存證信函—要求補足押金', created: '2026-10-02', status: '待確認' });
+
+  [['c2', '5號', '熱水器不熱', '2026-09-15', null, 0, 0, ''], ['c1', 'A-10-6', '浴室漏水', '2026-09-28', null, 0, 0, ''], ['c4', '1F-B', '門鎖故障', '2026-10-01', null, 0, 0, ''], ['c1', 'B-5-2', '冷氣運轉有異音', '2026-10-02', null, 0, 0, ''], ['c3', '3號房', '房間燈具不亮', '2026-10-03', null, 0, 0, ''],
+   ['c1', 'A-9-8', '冷氣不冷', '2026-09-18', '2026-09-20', 2800, 0, '非人為（公司負擔）'], ['c2', '9號', '紗窗破損', '2026-09-10', '2026-09-12', 900, 900, '人為（向房客收費）']].forEach(function (a, k) {
+    st.maint.push({ id: 'm' + (k + 1), unitId: U(a[0], a[1]).id, item: a[2], reportDate: a[3], doneDate: a[4], cost: a[5], charge: a[6], resp: a[7], erp: a[4] ? 'EX-11509' + (10 + k) : '' });
+  });
+
+  st.maint.push({ id: 'm8', cat: '發文郵資', unitId: b72.unitId, item: '存證信函 115-存-009 郵資', reportDate: '2026-09-09', doneDate: '2026-09-09', cost: 470, charge: 0, resp: '', erp: 'EX-1150921', payer: '小林', noticeNo: '115-存-009' });
+  st.company = seedCompany(); st.companyLog = [];
+  st.payables = [
+    { id: 'p1', caseId: 'c1', payee: '產權機關（河岸）', period: '10 月租金（原約＋擴充）', amount: 286000, dueDate: '2026-10-10', paidDate: null },
+    { id: 'p2', caseId: 'c3', payee: '房東 周先生', period: '10 月租金', amount: 60000, dueDate: '2026-10-15', paidDate: null },
+    { id: 'p3', caseId: 'c5', payee: '房東 廖先生', period: '10 月租金', amount: 40000, dueDate: '2026-10-20', paidDate: null },
+    { id: 'p4', caseId: 'c4', payee: '房東 邱小姐', period: '10 月租金', amount: 72000, dueDate: '2026-10-03', paidDate: '2026-10-03' },
+    { id: 'p5', caseId: 'c1', payee: '產權機關（河岸）', period: '9 月租金', amount: 286000, dueDate: '2026-09-10', paidDate: '2026-09-09' }
+  ];
+  st.suspense = [
+    { id: 'x1', date: '2026-10-02', amount: 13600, last5: '40213', status: '未辨識' },
+    { id: 'x2', date: '2026-10-03', amount: 1800, last5: '77120', status: '未辨識' },
+    { id: 'x3', date: '2026-10-04', amount: 9500, last5: '36558', status: '未辨識' }
+  ];
+  st.contacts.push({ id: 'k1', leaseId: b72.id, date: '2026-09-03', kind: '催繳', text: '電話未接，已傳訊息提醒 8 月租金' });
+  st.contacts.push({ id: 'k2', leaseId: b72.id, date: '2026-09-28', kind: '催繳', text: '房客表示月底前補繳' });
+  /* 檢視群組（D-111）：全公司共用、任何人可建可改；一個案件可在多個群組；只影響檢視，不影響帳務 */
+  st.groups = [{ id: 'g3', name: '河濱新城全部', caseIds: ['c6', 'c7', 'c8'] }, { id: 'g1', name: '產權機關標案', caseIds: ['c1', 'c2', 'c6', 'c7'] }, { id: 'g2', name: '私人房東與租賃移轉', caseIds: ['c3', 'c4', 'c5', 'c8'] }];
+  st.curGroup = null;
+  st.settingLog = [
+    { caseId: 'c3', date: '2025-09-01', item: '公共水費分攤基數', from: '房間數', to: '總居住人數', by: '陳經理', why: '分租改收人頭制' },
+    { caseId: 'c1', date: '2026-07-01', item: '上層合約租金分段', from: '260,200', to: '268,000', by: '陳經理', why: '產權機關調租公文' }
+  ];
+  var rooms = {};
+  st.leases.filter(function (l) { return l.active && caseOfLease(l) === 'c3'; }).forEach(function (l) { var p = 1000 + Math.floor(r() * 2000); rooms[l.id] = { prev: p, now: p + 60 + Math.floor(r() * 120) }; });
+  st.util = { billDeg: 520, billAmt: 8900, prevPriv: 12340, nowPriv: 12650, commonElec: 1200, price: 5, rooms: rooms };
+  /* 歷期分攤紀錄（D-107）：每期存帳單、基數與各戶明細的快照 */
+  var hl = st.leases.filter(function (l) { return rooms[l.id]; }); var codeOf = function (l) { return st.units.filter(function (x) { return x.id === l.unitId; })[0].code; };
+  var hp = [['2026-08', 505, 8650, 12040, 12340, 1150, '2026-09-04'], ['2026-07', 540, 9200, 11750, 12040, 1230, '2026-08-05'], ['2026-06', 470, 7980, 11480, 11750, 1080, '2026-07-03']];
+  var cur = {}; hl.forEach(function (l) { cur[l.id] = rooms[l.id].prev; });
+  st.utilHist = hp.map(function (p, i) {
+    var rm = {}; hl.forEach(function (l) { var d = 55 + Math.floor(r() * 110); rm[l.id] = { prev: cur[l.id] - d, now: cur[l.id] }; cur[l.id] -= d; });
+    var ls = hl.map(function (l, j) { if (i === 2 && j === 0) { var c = {}; for (var k in l) c[k] = l[k]; c.occupants = (l.occupants || 1) === 1 ? 2 : 1; return c; } return l; });
+    return utilSnap({ billDeg: p[1], billAmt: p[2], prevPriv: p[3], nowPriv: p[4], commonElec: p[5], price: 5, rooms: rm }, ls, codeOf, p[0], p[6]);
+  });
+  st.tasks = [
+    { id: 't1', title: '產生 10 月應收', meta: '每月 1 日', done: true, doneMeta: '10/01 完成' },
+    { id: 't2', title: '日曆同步（9 月）', meta: '帶看次數、無法辨識的行程須指定', done: false, go: 'cal-sync' },
+    { id: 't3', title: '房東端付款排程確認', meta: '本月 3 筆待付', done: true, doneMeta: '10/02 完成' },
+    { id: 't4', title: '水電分攤與請款明細', meta: '青田街 9 月帳單已到', done: false, go: '#/utility' },
+    { id: 't5', title: '產權機關月報', meta: '河岸大樓', done: false, go: '#/report/RP-01' },
+    { id: 't6', title: '遲繳違約金結算', meta: '9 月份', done: false, go: '#/billing/late' }
+  ];
+  return st;
+}
+function seedCompany() { return { name: '範例物業管理顧問股份有限公司', taxId: '12345678', addr: '新北市範例區示範路 1 號 3 樓', phone: '02-0000-0000', bank: '範例銀行 示範分行', acctName: '範例物業管理顧問股份有限公司', acct: '0000-000-000000' }; }
+function load() { try { var t = localStorage.getItem(KEY); if (t) { var o = JSON.parse(t); if (o && o.v === 2) { S = o; if (!S.company) { S.company = seedCompany(); S.companyLog = []; } return; } } } catch (e) {} S = seed(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* ================= 查詢 ================= */
+function U(id) { return first(S.units, function (u) { return u.id === id; }); }
+function C(id) { return first(S.cases, function (c) { return c.id === id; }); }
+function L(id) { return first(S.leases, function (l) { return l.id === id; }); }
+function H(id) { return first(S.houses, function (h) { return h.id === id; }); }
+function K(id) { return first(S.contracts, function (k) { return k.id === id; }); }
+function kOfUnit(u) { return K(H(u.houseId).contractId); }
+function curRent(k) { return k.segments[k.segments.length - 1].rent; }
+function activeLease(unitId) { return first(S.leases, function (l) { return l.unitId === unitId && l.active; }); }
+function uName(unitId) { var u = U(unitId); return C(u.caseId).short + ' ' + u.code; }
+function isAdmin() { return S.role === 'admin'; }
+function openAmt(r) { return r.amount - r.paid - (r.waived || 0); }
+function isOverdue(r) { return openAmt(r) > 0 && diff(addDays(r.due, 5), TODAY) > 0; }
+function leaseRecs(lid) { return S.receivables.filter(function (r) { return r.leaseId === lid; }); }
+/* 收款沖銷：依應繳日由早到晚 */
+function allocate(l, amt) { var left = amt, n = 0; leaseRecs(l.id).filter(function (r) { return openAmt(r) > 0; }).sort(function (a, b) { return a.due < b.due ? -1 : 1; }).forEach(function (r) { if (left <= 0) return; var x = Math.min(left, openAmt(r)); r.paid += x; left -= x; n++; }); return { n: n, left: left }; }
+/* 這筆收款會把哪些「逾期、有滯納金條款、還沒處理違約金」的租金沖到結清（D-084） */
+function lateHits(l, amt, date) {
+  if (!l.lateFee) return []; var left = amt, out = [];
+  leaseRecs(l.id).filter(function (r) { return openAmt(r) > 0; }).sort(function (a, b) { return a.due < b.due ? -1 : 1; }).forEach(function (r) {
+    if (left <= 0) return; var o = openAmt(r); var x = Math.min(left, o); left -= x;
+    if (r.item === '租金' && !r.lateBilled && x === o && diff(addDays(r.due, 5), date) > 0) out.push({ r: r, c: lateCalc(r, l, date) });
+  });
+  return out;
+}
+function lateOpenRents(l) { return !l.lateFee ? [] : leaseRecs(l.id).filter(function (r) { return r.item === '租金' && !r.lateBilled && isOverdue(r); }).sort(function (a, b) { return a.due < b.due ? -1 : 1; }); }
+function lateChoiceHtml(l, list) {
+  return '<div class="lfbox"><b>遲繳違約金認列</b><p class="muted small">' + list.map(function (x) { return rocM(x.r.month) + ' 租金｜' + x.c.days + ' 天｜' + money(x.c.fee); }).join('<br>') + '</p>' +
+    '<p class="muted small">沖銷後上列月份不再列為逾期，違約金試算將自清單移除，須於此決定（D-084）。天數計至入帳日；僅收部分款項、逾期租金未全數結清時免選，違約金持續計算。</p>' +
+    '<label class="fld inline"><input type="radio" name="lf" value="認列"><span>認列為應收（隨次月租金收取）</span></label>' +
+    '<label class="fld inline"><input type="radio" name="lf" value="不認列"><span>不認列（免收）</span></label>' +
+    fld('不認列的原因', '<textarea name="lfwhy" placeholder="選「不認列」時必填，例：主管同意減免"></textarea>') + '</div>';
+}
+function lateDecide(hits, f) {
+  if (!hits.length) return null;
+  if (!f.lf) throw '這筆收款會沖銷 ' + hits.length + ' 個月的遲繳租金，請先選擇違約金是否認列';
+  return { lf: f.lf, why: f.lf === '不認列' ? needText(f.lfwhy, '不認列違約金的原因') : '' };
+}
+function nextDue(r, l) { var nx = addMonths(r.due, 1); if (nx <= TODAY) nx = TODAY.slice(0, 8) + String(l.dueDay).padStart(2, '0'); if (nx <= TODAY) nx = addMonths(nx, 1); return nx; }
+function lateApply(l, hits, dec) {
+  if (!dec) return '';
+  var tot = 0;
+  hits.forEach(function (h) {
+    var nx = nextDue(h.r, l); h.r.lateBilled = true; tot += h.c.fee;
+    var rec = { id: uid('rv'), leaseId: l.id, item: '滯納金', month: nx.slice(0, 7), due: nx, amount: h.c.fee, paid: 0, src: h.r.month };
+    if (dec.lf === '不認列') { rec.waived = h.c.fee; rec.waiveWhy = dec.why; rec.waiveBy = isAdmin() ? '陳經理' : '小林'; }
+    S.receivables.push(rec);
+  });
+  var months = hits.map(function (h) { return rocM(h.r.month); }).join('、');
+  S.contacts.push({ id: uid('k'), leaseId: l.id, date: TODAY, kind: '違約金', text: months + ' 遲繳違約金 ' + money(tot) + (dec.lf === '認列' ? ' 認列為應收' : ' 不認列（' + dec.why + '）') });
+  return dec.lf === '認列' ? '；違約金 ' + money(tot) + ' 已列入應收，隨次月租金收取' : '；違約金 ' + money(tot) + ' 不認列，原因已記錄';
+}
+function itemBreak(recs) { var m = {}; recs.forEach(function (r) { var v = Math.max(0, openAmt(r)); if (v) m[r.item] = (m[r.item] || 0) + v; }); return Object.keys(m).map(function (k) { return k + ' ' + num(m[k]); }).join('＋'); }
+function lateTrial(l) { if (!l.lateFee) return 0; return sum(leaseRecs(l.id).filter(function (r) { return r.item === '租金' && isOverdue(r) && !r.lateBilled; }), function (r) { return lateCalc(r, l).fee; }); }
+function mgmtText(l) { return !l.mgmt ? '無' : l.mgmtMode === '另計' ? '另計 ' + money(l.mgmt) + '／月（房客另繳）' : '含在租金內（' + money(l.mgmt) + '／月由公司代繳管委會）'; }
+function leaseOpen(lid) { return sum(leaseRecs(lid), function (r) { return Math.max(0, openAmt(r)); }); }
+function arrearsOf(l) {
+  var od = leaseRecs(l.id).filter(isOverdue); var months = {};
+  od.forEach(function (r) { months[r.month] = 1; });
+  var n = Object.keys(months).length;
+  var mine = S.notices.filter(function (x) { return x.leaseId === l.id && x.kind.indexOf('存證信函') === 0; });
+  return { l: l, months: n, amount: sum(od, openAmt), od: od, stage: Math.min(n, 5), sentThisMonth: mine.some(function (x) { return x.created.slice(0, 7) === TODAY.slice(0, 7); }), pending: mine.some(function (x) { return x.status === '待確認'; }) };
+}
+function noticeKind(stage) { return stage <= 2 ? '存證信函—要求補足押金' : stage <= 4 ? '存證信函—催繳租金' : '存證信函—終止＋限期搬遷'; }
+function missingDocs(l) {
+  var m = [];
+  if (!l.phone) m.push('承租人電話');
+  if (l.guarantor && !l.guarantor.phone) m.push('保證人電話');
+  if (!l.docs.addr) m.push('戶籍地址');
+  if (!l.guarantor && !l.deco) m.push('連帶保證人或裝潢保證金');
+  if (!l.docs.life) m.push('珍愛生命條款');
+  if (!l.docs.idT) m.push('承租人證件影本');
+  if (l.guarantor && !l.docs.idG) m.push('保證人證件影本');
+  if (!l.docs.scan) m.push('合約掃描');
+  if (!l.docs.efile) m.push('電子檔');
+  if (l.start <= TODAY && !l.docs.photoIn) m.push('起租點交照片存 NAS');
+  return m;
+}
+/* 退租結算 */
+function stLease(s) { return L(s.leaseId); }
+function stRefundTotal(s) { var l = stLease(s); return l.deposit + (l.deco || 0) + sum(s.refundItems, function (x) { return x.amount; }) - sum(s.deductItems, function (x) { return x.amount; }) - sum(['water', 'elec', 'gas'], function (k) { return s.utils[k] || 0; }); }
+function utilPending(s) { return ['water', 'elec', 'gas'].filter(function (k) { return s.utils[k] == null; }); }
+function refundStart(s) {
+  if (!s.signedDate || !s.passbookDate) return null;
+  if (s.residency && !s.movedOutDate) return null;
+  return [s.signedDate, s.passbookDate, s.movedOutDate].filter(Boolean).sort().pop();
+}
+function refundBlockers(s) {
+  var w = [];
+  if (!s.draftOk) w.push('承租人尚未確認結算初稿');
+  if (!s.signedDate) w.push('完整版尚未簽名');
+  if (!s.passbookDate) w.push('尚未收到存摺影本');
+  if (!s.nameMatch) w.push('退款帳戶戶名與承租人不同，不得退款（B-3）');
+  if (s.residency && !s.movedOutDate) w.push('承租人設籍本址，尚未確認遷出（B-4、D-054）');
+  return w;
+}
+function leftText(left) { return left < 0 ? '已逾期 ' + (-left) + ' 天' : left === 0 ? '今天到期' : '剩 ' + left + ' 天'; }
+function lateCalc(r, l, end) { var st = addDays(r.due, 6); var days = Math.max(0, diff(st, end || TODAY) + 1); return { start: st, days: days, fee: Math.round(l.rent * 0.01 * days) }; }
+
+/* ================= 首頁卡片 ================= */
+function filingItems() { return S.filings.filter(function (f) { return f.status === '待辦'; }).map(function (f) { var dl = addDays(f.signDate, 30); return { f: f, dl: dl, left: diff(TODAY, dl) }; }).sort(function (a, b) { return a.left - b.left; }); }
+function refundItems() { return S.settlements.filter(function (s) { return !s.refundedDate; }).map(function (s) { var st = refundStart(s); if (!st) return null; var dl = addWorkdays(st, 3); return { s: s, dl: dl, left: diff(TODAY, dl) }; }).filter(Boolean).sort(function (a, b) { return a.left - b.left; }); }
+function arrearsItems() { return S.leases.filter(function (l) { return l.active; }).map(arrearsOf).filter(function (a) { return a.months > 0; }).sort(function (a, b) { return b.months - a.months || b.amount - a.amount; }); }
+function depositItems() { return S.reservations.filter(function (r) { return r.status === '保留中' && diff(r.holdUntil, TODAY) > 0; }); }
+function noticeItems() { return S.notices.filter(function (n) { return n.status === '待確認'; }); }
+function payableItems() { return S.payables.filter(function (p) { return !p.paidDate && p.dueDate.slice(0, 7) <= TODAY.slice(0, 7); }).sort(function (a, b) { return a.dueDate < b.dueDate ? -1 : 1; }); }
+function expiringItems() { return S.leases.filter(function (l) { var d = diff(TODAY, l.end); return l.active && d >= 0 && d <= 30 && l.renew === '待詢問'; }).sort(function (a, b) { return a.end < b.end ? -1 : 1; }); }
+function isRepair(m) { return (m.cat || '修繕') === '修繕'; }
+function maintItems() { return S.maint.filter(function (m) { return isRepair(m) && !m.doneDate; }).sort(function (a, b) { return a.reportDate < b.reportDate ? -1 : 1; }); }
+function masterItems() { var lim = addMonths(TODAY, 6); return S.contracts.filter(function (k) { return k.end >= TODAY && k.end <= lim; }); }
+function photoItems() {
+  var a = S.leases.filter(function (l) { return l.active && l.start <= TODAY && !l.docs.photoIn; }).map(function (l) { return { l: l, kind: '起租', date: l.start }; });
+  var b = S.settlements.filter(function (s) { return s.moveOutDate <= TODAY && !(s.checks && s.checks.photo); }).map(function (s) { return { l: stLease(s), s: s, kind: '退租', date: s.moveOutDate }; });
+  return a.concat(b).sort(function (x, y) { return x.date < y.date ? -1 : 1; });
+}
+function staleItems() { return S.units.filter(function (u) { return u.status === '整備中' && diff(u.statusSince, TODAY) > 60; }); }
+
+var CARD_DEFS = [
+  { key: 'filing', sev: 'red', title: '申報即將逾期', unit: '筆', items: function () { return filingItems().filter(function (x) { return x.left <= 7; }); },
+    head: function (it) { var x = it[0]; return uName(x.f.unitId) + ' ' + x.f.type + '｜' + leftText(x.left) + '（簽約日 ' + roc(x.f.signDate) + '）'; },
+    rule: '實價登錄、地政司包租／轉租申報都要在<b>簽約日起 30 天內</b>完成，逾期罰鍰 1～5 萬元（specs/04 §4）。續約也要申報、最常漏。剩 7 天內才出現在首頁——「7 天」是暫定門檻，待同事意見（S-21）。' },
+  { key: 'refund', sev: 'red', title: '退款期限', unit: '筆', items: refundItems,
+    head: function (it) { var x = it[0]; return uName(x.s.unitId) + '｜期限 ' + roc(x.dl) + (x.left === 0 ? '（今天）' : x.left === 1 ? '（明天）' : x.left < 0 ? '（已逾期）' : ''); },
+    rule: '完整版簽名、存摺影本、戶籍遷出確認（有設籍者）三者<b>最晚那天</b>起算，<b>3 個工作天內</b>退還押金（specs/03 §6.3、D-054）。條件沒齊的不列入。' },
+  { key: 'arrears', sev: 'amber', title: '欠租與催繳', unit: '戶', items: arrearsItems,
+    head: function (it) { var k = it.filter(function (a) { return !a.sentThisMonth; }).length; return (k ? '本月還要發 ' + k + ' 封存證信函' : '本月存證信函都已製作') + '｜最久：' + uName(it[0].l.unitId) + ' 欠 ' + it[0].months + ' 期'; },
+    rule: '繳款日＋寬限 5 天仍未沖銷算逾期。存證信函每月一封、固定 5 封：第 1、2 封要求補足押金，第 3、4 封催繳租金，第 5 封終止並限期搬遷（D-043、D-053）；發文須主管確認（D-061）。' },
+  { key: 'deposit', sev: 'amber', title: '訂金保留已到期', unit: '筆', items: depositItems,
+    head: function (it) { var x = it[0]; return uName(x.unitId) + '｜保留至 ' + roc(x.holdUntil) + '，請確認沒收或簽約'; },
+    rule: '保留期限當天仍可簽約，<b>次日起</b>提醒；由內勤確認後才轉沒收，系統不自動沒收（D-044）。' },
+  { key: 'notice', sev: 'amber', title: '待主管確認的發文', unit: '份', admin: true, items: noticeItems,
+    head: function (it) { return it.map(function (n) { return n.no; }).join('、'); },
+    rule: '存證信函與違約提醒通知單都須主管確認才能寄出（D-061）。本卡片僅管理者可見。' },
+  { key: 'payable', sev: 'amber', title: '本期房東付款', unit: '筆', items: payableItems,
+    head: function (it) { return '合計 ' + money(sum(it, function (p) { return p.amount; })) + '｜最早 ' + roc(it[0].dueDate); },
+    rule: '付款期在本月、尚未登錄付款的房東端應付款（specs/05 §3）。逾期可能構成對出租方違約，是否改為紅色待同事意見（S-21）。' },
+  { key: 'expiring', sev: 'amber', title: '房客租約將到期', unit: '份', items: expiringItems,
+    head: function (it) { return '1 個月內到期、續約意向待詢問｜最近：' + uName(it[0].unitId) + ' ' + roc(it[0].end); },
+    rule: '租約迄日前 1 個月內、續約意向仍是「待詢問」（Q-015）。登錄續約意向後自清單移除；意向為「續約」的到單戶頁「建立續約合約」（D-082）。' },
+  { key: 'maint', sev: 'gray', title: '維修未結案', unit: '筆', items: maintItems,
+    head: function (it) { var x = it[0]; return '最久：' + uName(x.unitId) + ' ' + x.item + '｜報修 ' + diff(x.reportDate, TODAY) + ' 天'; },
+    rule: '有報修日、尚無完工日的維修紀錄（specs/06 §2）。完工時要填成本、責任歸屬與向房客收費。' },
+  { key: 'master', sev: 'gray', title: '上層合約將到期', unit: '份', items: masterItems,
+    head: function (it) { return C(it[0].caseId).name + '｜' + it[0].name + ' 迄日 ' + roc(it[0].end); },
+    rule: '對房東／產權機關的上層合約，迄日前 6 個月開始提醒（Q-015）。每個案件（上層合約）逐份計算，擴充合約依各自迄日（D-109）。' },
+  { key: 'stale', sev: 'gray', title: '單元狀態太久沒更新', unit: '間', items: staleItems,
+    head: function (it) { return uName(it[0].id) + '｜整備中 ' + diff(it[0].statusSince, TODAY) + ' 天'; },
+    rule: '外勤回報、內勤登記是人工轉手，容易延遲（specs/02 §5.1.1）。「整備中超過 60 天」是暫定門檻，待同事意見（S-21）。' },
+  { key: 'calendar', sev: 'gray', title: '日曆待指定', unit: '筆', items: function () { return S.calPending; },
+    head: function (it) { return it[0].hint; }, rule: '同步公司日曆後，無法辨識單元的行程列於此，由人工指定（D-074）。系統不保存原始標題（標題常有看房者姓名電話）。' },
+  { key: 'photo', sev: 'gray', title: '點交照片未存 NAS', unit: '筆', items: photoItems,
+    head: function (it) { var x = it[0]; return '最久：' + uName(x.l.unitId) + ' ' + x.kind + '點交 ' + roc(x.date) + '｜已過 ' + diff(x.date, TODAY) + ' 天'; },
+    rule: '點交照片照舊用 LINE 相簿，存到 NAS 後在系統勾選（D-112）。系統不存照片、看不到 NAS，勾選是同事自行確認；<b>只提醒、不擋流程</b>，沒勾也可以起租、退租結算與退款。起租、退租點交日過後即列入（門檻待同事意見，S-21）。' }
+];
+function cards() { return CARD_DEFS.filter(function (d) { return !d.admin || isAdmin(); }).map(function (d) { var it = d.items(); return { def: d, key: d.key, sev: d.sev, title: d.title, unit: d.unit, admin: d.admin, items: it, count: it.length, headline: it.length ? d.head(it) : '' }; }); }
+function cardDef(key) { return first(CARD_DEFS, function (d) { return d.key === key; }); }
+
+/* ================= 版面 ================= */
+function route() { return location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent); }
+function navKey(page) { return { home: 'home', todo: 'home', cases: 'cases', 'case': 'cases', unit: 'cases', billing: 'billing', utility: 'billing', maint: 'maint', ref: 'maint', filings: 'filings', reports: 'reports', report: 'reports', settings: 'settings', casecfg: 'settings', sitecfg: 'settings', company: 'settings', more: 'more', search: 'home' }[page] || 'home'; }
+function sideNav(page) {
+  var k = navKey(page);
+  var items = [['home', '首頁', 'home', '#/'], ['cases', '案件', 'building', '#/cases'], ['billing', '帳務', 'wallet', '#/billing'], ['maint', '維修', 'wrench', '#/maint'], ['filings', '申報', 'file', '#/filings'], ['reports', '報表', 'chart', '#/reports']];
+  return '<div class="brand"><span class="brand-mark">' + ic('home') + '</span><b>包租管理</b></div>' +
+    '<div class="nav">' + items.map(function (x) { return '<a href="' + x[3] + '"' + (k === x[0] ? ' aria-current="page"' : '') + '>' + ic(x[2]) + x[1] + '</a>'; }).join('') + '</div>' +
+    '<div class="side-foot"><div class="nav"><a href="#/settings"' + (k === 'settings' ? ' aria-current="page"' : '') + '>' + ic('gear') + '設定</a></div>' +
+    '<label class="role"><span>試用身分（切換以比較權限差異）</span><select data-change="role"><option value="admin"' + (isAdmin() ? ' selected' : '') + '>陳經理｜管理者</option><option value="staff"' + (!isAdmin() ? ' selected' : '') + '>小林｜一般人員</option></select></label></div>';
+}
+function tabbar(page) {
+  var k = navKey(page);
+  return '<a href="#/"' + (k === 'home' ? ' aria-current="page"' : '') + '>' + ic('home', 24) + '首頁</a>' +
+    '<a href="#/cases"' + (k === 'cases' ? ' aria-current="page"' : '') + '>' + ic('building', 24) + '案件</a>' +
+    '<button type="button" data-act="quick-sheet"><span class="plus">' + ic('plus', 20, 2.2) + '</span>登錄</button>' +
+    '<a href="#/more"' + (['more', 'billing', 'maint', 'filings', 'reports', 'settings'].indexOf(k) >= 0 ? ' aria-current="page"' : '') + '>' + ic('menu', 24) + '更多</a>';
+}
+function searchBox() { return '<div class="sbox only-desk"><label class="sr" for="gq">搜尋</label>' + ic('search') + '<input id="gq" type="search" autocomplete="off" placeholder="搜尋戶號、日曆寫法（如 9-8）、地址、稱呼或電話末碼" data-search="drop"><div class="sdrop" id="sdrop" hidden></div></div>'; }
+function mtop(back) { return '<div class="mtop only-mob">' + (back ? '<a class="backlink" href="' + back[0] + '">' + ic('back', 22, 2) + esc(back[1]) + '</a>' : '<span></span>') + '<a class="icon" href="#/search" aria-label="搜尋">' + ic('search', 22) + '</a></div>'; }
+function head(title, sub, right, back) {
+  return mtop(back) + (back ? '<a class="backlink only-desk" href="' + back[0] + '">' + ic('back', 20, 2) + esc(back[1]) + '</a>' : '') +
+    '<header class="phead"><div><h1 class="serif">' + title + '</h1>' + (sub ? '<p class="muted">' + sub + '</p>' : '') + '</div><div class="phead-r">' + (right || '') + searchBox() + '</div></header>';
+}
+function tabsNav(items, cur) { return '<nav class="tabs">' + items.map(function (x) { return '<a href="' + x[1] + '"' + (x[0] === cur ? ' aria-current="page"' : '') + '>' + x[2] + '</a>'; }).join('') + '</nav>'; }
+
+/* ================= 首頁 ================= */
+function legend() { return '<div class="legend"><span><i class="dot" style="background:var(--red)"></i>公司的期限將到或已過</span><span><i class="dot" style="background:#B7791F"></i>本月要處理</span><span><i class="dot" style="background:#A39889"></i>持續追蹤</span></div>'; }
+function cardHtml(c) {
+  return '<article class="card acard"><div class="acard-h">' + sevBadge(c.sev) + '<h3>' + c.title + '</h3>' + (c.admin ? '<span class="tag">限管理者</span>' : '') + '</div>' +
+    '<div class="acount"><b>' + c.count + '</b><span>' + c.unit + '</span></div><p class="adetail">' + esc(c.headline) + '</p>' +
+    '<a class="more" href="#/todo/' + c.key + '">查看全部' + ic('chev', 16, 2) + '</a></article>';
+}
+function tasksPanel() {
+  var d = S.tasks.filter(function (t) { return t.done; }).length;
+  return '<section class="card pad" aria-labelledby="task-h"><div class="task-h"><h2 class="serif" id="task-h">10 月例行作業</h2><div class="bar"><span style="width:' + Math.round(d / S.tasks.length * 100) + '%"></span></div><span class="muted small num">' + d + ' / ' + S.tasks.length + ' 完成</span></div>' +
+    '<div class="grid3 tasks">' + S.tasks.map(function (t) {
+      var go = t.done || !t.go ? '' : (t.go.charAt(0) === '#' ? '<a class="more" href="' + t.go + '">前往' + ic('chev', 14, 2) + '</a>' : '<button type="button" class="more" style="background:none;border:none;cursor:pointer;color:var(--accent-d);padding:0" data-act="' + t.go + '">前往' + ic('chev', 14, 2) + '</button>');
+      return '<div style="display:flex;align-items:center;gap:8px"><label class="task" style="flex:1"><input type="checkbox" data-change="task" data-id="' + t.id + '"' + (t.done ? ' checked' : '') + '><span><b>' + esc(t.title) + '</b><small>' + esc(t.done ? (t.doneMeta || '已完成') : t.meta) + '</small></span></label>' + go + '</div>';
+    }).join('') + '</div></section>';
+}
+function pHome() {
+  var cs = cards(); var vis = cs.filter(function (c) { return c.count > 0; }); var hid = cs.filter(function (c) { return c.count === 0; });
+  var total = sum(vis, function (c) { return c.count; });
+  var desk = '<div class="only-desk"><header class="phead"><div><h1 class="serif">待處理事項 ' + total + ' 件</h1><p class="muted">' + rocW(TODAY) + '｜' + S.cases.length + ' 個案件、' + S.units.length + ' 間出租單元</p></div></header>' +
+    '<section class="sec hsearch" aria-labelledby="hs-h"><h2 class="serif" id="hs-h">單元搜尋</h2><div class="sbox"><label class="sr" for="gq">搜尋單元</label>' + ic('search', 22) + '<input id="gq" type="search" autocomplete="off" placeholder="搜尋戶號、日曆寫法（如 9-8）、地址、稱呼或電話末碼" data-search="drop"><div class="sdrop" id="sdrop" hidden></div></div><p class="muted small">按 Enter 開啟第一筆結果，或由清單選取</p></section>' +
+    '<section class="sec" aria-labelledby="need-h"><div class="sec-h"><h2 class="serif" id="need-h">需要處理</h2>' + legend() + '</div>' +
+    (vis.length ? '<div class="grid3">' + vis.map(cardHtml).join('') + '</div>' : '<div class="empty">目前無待處理事項</div>') +
+    (hid.length ? '<p class="muted small">無待處理項目（已收合）：' + hid.map(function (c) { return c.title; }).join('、') + '</p>' : '') + '</section>' + tasksPanel() + '</div>';
+  var mob = '<div class="only-mob"><div class="mhead"><div><h1 class="serif">首頁</h1><p class="muted small">' + (isAdmin() ? '陳經理' : '小林') + '｜' + rocW(TODAY) + '</p></div><span class="avatar">' + (isAdmin() ? '陳' : '林') + '</span></div>' +
+    '<div class="sbox" style="width:100%"><label class="sr" for="mq">搜尋</label>' + ic('search') + '<input id="mq" type="search" autocomplete="off" placeholder="戶號、9-8、地址、稱呼、電話末碼" data-search="inline"></div><div id="mres" class="card list" hidden style="margin-top:8px"></div>' +
+    '<div class="quick3"><button type="button" data-act="quick" data-k="repair">' + ic('wrench', 24) + '報修</button><button type="button" data-act="quick" data-k="status">' + ic('status', 24) + '狀態回報</button><button type="button" data-act="quick" data-k="contact">' + ic('chat', 24) + '聯繫紀錄</button></div>' +
+    '<section><div class="sec-h" style="margin-bottom:10px"><h2 class="serif" style="font-size:19px">待處理事項</h2><span class="muted small">' + total + ' 件</span></div>' +
+    (vis.length ? '<div class="card list">' + vis.map(function (c) { return '<a class="lrow" href="#/todo/' + c.key + '">' + sevBadge(c.sev, 32) + '<span class="lmain"><b>' + c.title + '</b><small>' + esc(c.headline) + '</small></span><span class="num">' + c.count + '</span>' + ic('chev', 18, 2) + '</a>'; }).join('') + '</div>' : '<div class="empty">目前無待處理事項</div>') + '</section></div>';
+  return desk + mob;
+}
+
+/* ================= 待辦清單 ================= */
+function pTodo(key) {
+  var d = cardDef(key); if (!d) return notFound();
+  if (d.admin && !isAdmin()) return head(d.title, '', '', ['#/', '首頁']) + '<div class="empty">本項限管理者檢視。</div>';
+  var it = d.items(); var rows = '';
+  if (key === 'filing') rows = it.map(filingRow).join('');
+  if (key === 'refund') rows = it.map(function (x) { return '<div class="todo-row"><span class="lmain"><b>' + uName(x.s.unitId) + '｜' + esc(stLease(x.s).tenant) + '</b><small>退款期限 ' + roc(x.dl) + '（' + leftText(x.left) + '）｜應退 ' + money(stRefundTotal(x.s)) + '</small></span><div class="acts"><a class="btn sm outline" href="#/unit/' + x.s.unitId + '">開啟結算</a></div></div>'; }).join('');
+  if (key === 'arrears') rows = it.map(arrearsRow).join('');
+  if (key === 'deposit') rows = it.map(function (x) { return '<div class="todo-row"><span class="lmain"><b>' + uName(x.unitId) + '｜付訂人 ' + esc(x.payer) + '</b><small>訂金 ' + money(x.amount) + '｜保留至 ' + roc(x.holdUntil) + '（已過 ' + diff(x.holdUntil, TODAY) + ' 天）</small></span><div class="acts"><a class="btn sm outline" href="#/unit/' + x.unitId + '">開啟單戶頁</a></div></div>'; }).join('');
+  if (key === 'notice') rows = it.map(noticeRow).join('');
+  if (key === 'payable') rows = it.map(payableRow).join('');
+  if (key === 'expiring') rows = it.map(function (l) { return '<div class="todo-row"><span class="lmain"><b>' + uName(l.unitId) + '｜' + esc(l.tenant) + '</b><small>租約迄日 ' + roc(l.end) + '（' + leftText(diff(TODAY, l.end)) + '）｜續約意向：' + l.renew + '</small></span><div class="acts"><button class="btn sm outline" data-act="renew" data-l="' + l.id + '">登錄續約意向</button><a class="btn sm ghost" href="#/unit/' + l.unitId + '">單戶頁</a></div></div>'; }).join('');
+  if (key === 'maint') rows = it.map(maintRow).join('');
+  if (key === 'master') rows = it.map(function (k) { return '<div class="todo-row"><span class="lmain"><b>' + C(k.caseId).name + '｜' + esc(k.name) + '</b><small>迄日 ' + roc(k.end) + '（剩 ' + diff(TODAY, k.end) + ' 天）｜出租方：' + esc(k.lessor) + '｜選擇權：' + esc(k.options) + '</small></span><div class="acts"><a class="btn sm ghost" href="#/case/' + k.caseId + '/contracts">看合約</a></div></div>'; }).join('');
+  if (key === 'stale') rows = it.map(function (u) { return '<div class="todo-row"><span class="lmain"><b>' + uName(u.id) + '</b><small>' + u.status + '，自 ' + roc(u.statusSince) + ' 起已 ' + diff(u.statusSince, TODAY) + ' 天未更新</small></span><div class="acts"><a class="btn sm outline" href="#/unit/' + u.id + '">開啟單戶頁</a></div></div>'; }).join('');
+  if (key === 'photo') rows = it.map(function (x) { return '<div class="todo-row"><span class="lmain"><b>' + uName(x.l.unitId) + '｜' + esc(x.l.tenant) + '</b><small>' + x.kind + '點交照片｜點交日 ' + roc(x.date) + '（已過 ' + diff(x.date, TODAY) + ' 天）</small></span><div class="acts">' + (x.kind === '起租' ? '<button class="btn sm outline" data-act="doc-ok" data-l="' + x.l.id + '" data-k="photoIn">已存 NAS</button>' : '<a class="btn sm outline" href="#/unit/' + x.l.unitId + '">到退租結算勾選</a>') + '</div></div>'; }).join('');
+  if (key === 'calendar') rows = it.map(function (x) { return '<div class="todo-row"><span class="lmain"><b>' + esc(x.hint) + '</b><small>' + roc(x.date) + '｜' + x.type + '｜' + esc(x.why) + '</small></span><div class="acts"><button class="btn sm outline" data-act="cal-assign" data-id="' + x.id + '">指定單元</button><button class="btn sm ghost" data-act="cal-ignore" data-id="' + x.id + '">不歸戶</button></div></div>'; }).join('');
+  return head(d.title, it.length + ' ' + d.unit, key === 'calendar' ? '<button class="btn outline" data-act="cal-sync">' + ic('cal') + '同步日曆</button>' : '', ['#/', '首頁']) + '<p class="rule">' + d.rule + '</p>' +
+    (it.length ? '<div class="card">' + rows + '</div>' : '<div class="empty">目前無待處理事項</div>');
+}
+function filingRow(x) {
+  var p = x.left <= 7 ? 'p-red' : 'p-gray'; var l = L(x.f.leaseId);
+  return '<div class="todo-row"><span class="lmain"><b>' + uName(x.f.unitId) + '｜' + x.f.type + (l.source === '續約' ? ' <span class="tag">續約</span>' : '') + '</b><small>承租人 ' + esc(l.tenant) + '｜簽約日 ' + roc(x.f.signDate) + '｜期限 ' + roc(x.dl) + '</small></span><span class="pill ' + p + '">' + leftText(x.left) + '</span>' +
+    '<div class="acts"><button class="btn sm outline" data-act="filing-done" data-id="' + x.f.id + '">標記已辦</button><button class="btn sm ghost" data-act="filing-skip" data-id="' + x.f.id + '">決定不申報</button></div></div>';
+}
+function arrearsRow(a) {
+  var l = a.l; var dis = a.pending ? '已有一份待主管確認的發文' : a.sentThisMonth ? '本月已發過' : '';
+  return '<div class="todo-row"><span class="lmain"><b>' + uName(l.unitId) + '｜' + esc(l.tenant) + '</b><small>逾期 ' + a.months + ' 期、' + money(a.amount) + '（' + itemBreak(a.od) + '）｜應發第 ' + a.stage + ' 封：' + noticeKind(a.stage).replace('存證信函—', '') + '</small></span>' +
+    (a.pending ? '<span class="pill p-amber">待主管確認</span>' : a.sentThisMonth ? '<span class="pill p-ok">本月已發</span>' : '') +
+    '<div class="acts"><button class="btn sm outline" data-act="notice-make" data-l="' + l.id + '"' + (dis ? ' disabled title="' + dis + '"' : '') + '>製作存證信函</button><button class="btn sm ghost" data-act="contact" data-l="' + l.id + '">聯繫紀錄</button><a class="btn sm ghost" href="#/unit/' + l.unitId + '">單戶頁</a></div></div>';
+}
+function noticeRow(n) {
+  var l = L(n.leaseId);
+  return '<div class="todo-row"><span class="lmain"><b>' + n.no + '｜' + n.kind + '</b><small>' + uName(l.unitId) + '｜' + esc(l.tenant) + '｜製作日 ' + roc(n.created) + (n.fact ? '｜' + esc(n.fact) : '') + '</small></span><div class="acts">' +
+    (n.status === '已確認' ? '<span class="pill p-ok">已確認</span>' : isAdmin() ? '<button class="btn sm primary" data-act="notice-ok" data-id="' + n.id + '">主管確認</button>' : '<span class="pill p-amber">待主管確認</span>') + '</div></div>';
+}
+function payableRow(p) { return '<div class="todo-row"><span class="lmain"><b>' + esc(p.payee) + '｜' + esc(p.period) + '</b><small>' + C(p.caseId).name + '｜' + money(p.amount) + '｜付款期限 ' + roc(p.dueDate) + (p.paidDate ? '｜已付 ' + roc(p.paidDate) : '') + '</small></span>' + (p.paidDate ? '<span class="pill p-ok">已付款</span>' : '<div class="acts"><button class="btn sm outline" data-act="payable-paid" data-id="' + p.id + '">登錄已付款</button></div>') + '</div>'; }
+function expenseRow(m) {
+  return '<div class="todo-row"><span class="lmain"><b>' + uName(m.unitId) + '｜' + esc(m.item) + ' <span class="tag">' + esc(m.cat) + '</span></b><small>' + roc(m.doneDate) + '｜' + money(m.cost) + (m.payer ? '｜請款人 ' + esc(m.payer) : '') + (m.erp ? '｜正航 ' + esc(m.erp) : '') + (m.noticeNo ? '｜文號 ' + esc(m.noticeNo) : '') + '｜不向房客收</small></span><a class="btn sm ghost" href="#/unit/' + m.unitId + '">單戶頁</a></div>';
+}
+function maintRow(m) {
+  return '<div class="todo-row"><span class="lmain"><b>' + uName(m.unitId) + '｜' + esc(m.item) + '</b><small>報修日 ' + roc(m.reportDate) + (m.doneDate ? '｜完工日 ' + roc(m.doneDate) + '｜成本 ' + money(m.cost) + (m.charge ? '｜向房客收 ' + money(m.charge) : '') + '｜' + esc(m.resp) + (m.erp ? '｜正航 ' + esc(m.erp) : '') : '｜已 ' + diff(m.reportDate, TODAY) + ' 天') + '</small></span>' +
+    (m.doneDate ? '<span class="pill p-ok">已完工</span>' : '<div class="acts"><button class="btn sm outline" data-act="maint-done" data-id="' + m.id + '">登錄完工</button><a class="btn sm ghost" href="#/unit/' + m.unitId + '">單戶頁</a></div>') + '</div>';
+}
+
+/* ================= 案件（＝一份上層合約，D-109）與檢視群組（D-111） ================= */
+function statsFor(ids) {
+  var us = S.units.filter(function (u) { return ids.indexOf(u.caseId) >= 0; });
+  var cnt = { '已出租': 0, '招租中': 0, '整備中': 0, '特殊狀況': 0 }; us.forEach(function (u) { cnt[u.status]++; });
+  var ls = S.leases.filter(function (l) { return l.active && ids.indexOf(U(l.unitId).caseId) >= 0; });
+  var unpaid = sum(ls, function (l) { return sum(leaseRecs(l.id).filter(isOverdue), openAmt); });
+  var exp = ls.filter(function (l) { var d = diff(TODAY, l.end); return d >= 0 && d <= 30; }).length;
+  return { us: us, cnt: cnt, unpaid: unpaid, exp: exp };
+}
+function caseStats(c) { return statsFor([c.id]); }
+function distbar(cnt) { return '<div class="distbar"><span style="flex-grow:' + cnt['已出租'] + ';background:var(--s-rent)"></span><span style="flex-grow:' + cnt['招租中'] + ';background:var(--s-list)"></span><span style="flex-grow:' + cnt['整備中'] + ';background:var(--s-prep)"></span><span style="flex-grow:' + cnt['特殊狀況'] + ';background:var(--s-spec)"></span></div>'; }
+function distTxt(cnt) { return '<small class="muted num" style="font-size:12px">已出租 ' + cnt['已出租'] + '・招租中 ' + cnt['招租中'] + '・整備中 ' + cnt['整備中'] + '・特殊 ' + cnt['特殊狀況'] + '</small>'; }
+function grpCur() { return S.curGroup ? first(S.groups || [], function (g) { return g.id === S.curGroup; }) || null : null; }
+function inGrp(caseId) { var g = grpCur(); return !g || g.caseIds.indexOf(caseId) >= 0; }
+function viewCases() { return S.cases.filter(function (c) { return inGrp(c.id); }); }
+function groupBar() {
+  var g = grpCur();
+  return '<div class="filt" style="align-items:center"><span class="muted small">檢視群組</span><a href="javascript:void 0" data-act="grp-pick" data-id=""' + (!g ? ' aria-current="page"' : '') + '>全部案件</a>' +
+    (S.groups || []).map(function (x) { return '<a href="javascript:void 0" data-act="grp-pick" data-id="' + x.id + '"' + (g && g.id === x.id ? ' aria-current="page"' : '') + '>' + esc(x.name) + '（' + x.caseIds.length + '）</a>'; }).join('') +
+    '<button class="btn sm ghost" data-act="grp-edit" data-id="">' + ic('plus', 16) + '新增群組</button>' + (g ? '<button class="btn sm ghost" data-act="grp-edit" data-id="' + g.id + '">編輯群組</button>' : '') + '</div>' +
+    (g ? '<p class="muted small" style="margin:-6px 0 12px">群組「' + esc(g.name) + '」：' + g.caseIds.map(function (id) { return C(id).name; }).join('、') + '。合計以組內所有單元重算；群組全公司共用，只影響檢視、不影響帳務（D-111）。</p>' : '');
+}
+function kLabel(caseId) { var ks = S.contracts.filter(function (k) { return k.caseId === caseId; }); return esc(ks[0].no) + (ks.length > 1 ? '（含擴充 ' + (ks.length - 1) + ' 份）' : ''); }
+function caseSites(caseId) { var m = {}; S.houses.filter(function (h) { return h.caseId === caseId; }).forEach(function (h) { m[bldName(h)] = 1; }); return Object.keys(m); }
+function pCases() {
+  var g = grpCur(); var cs = viewCases(); var ids = cs.map(function (c) { return c.id; }); var t = statsFor(ids);
+  var vac = t.cnt['招租中'] / Math.max(1, t.cnt['招租中'] + t.cnt['已出租']);
+  var rows = cs.map(function (c) {
+    var s = caseStats(c); var st = caseSites(c.id);
+    return '<tr class="click" data-go="#/case/' + c.id + '"><td><a class="rowlink" href="#/case/' + c.id + '">' + c.name + '</a><br><small class="muted">' + kLabel(c.id) + '｜案場 ' + st.length + ' 個</small></td><td class="r num">' + s.us.length + '</td><td>' + distbar(s.cnt) + distTxt(s.cnt) + '</td><td class="r num">' + (s.unpaid ? money(s.unpaid) : '—') + '</td><td class="r num hide-mob">' + s.exp + '</td></tr>';
+  }).join('');
+  var tot = '<tr style="background:var(--gray-s)"><td><b>' + (g ? '群組合計' : '全部合計') + '</b><br><small class="muted">' + cs.length + ' 個案件</small></td><td class="r num"><b>' + t.us.length + '</b></td><td>' + distbar(t.cnt) + distTxt(t.cnt) + '</td><td class="r num"><b>' + (t.unpaid ? money(t.unpaid) : '—') + '</b></td><td class="r num hide-mob"><b>' + t.exp + '</b></td></tr>';
+  return head('案件', S.cases.length + ' 個案件、' + S.units.length + ' 間出租單元｜一個案件＝一份上層合約（含擴充），點案件看單元、合約與房屋') + groupBar() +
+    (g ? '<section class="card pad" style="margin-bottom:14px"><h2 class="serif h2s" style="margin-bottom:8px">' + esc(g.name) + '｜群組合計</h2><div class="grid3"><div class="fact"><span>出租單元</span><b>' + t.us.length + ' 間</b></div><div class="fact"><span>招租空置率（今天）</span><b>' + Math.round(vac * 100) + '%</b></div><div class="fact"><span>逾期未收</span><b>' + (t.unpaid ? money(t.unpaid) : '—') + '</b></div></div><div style="margin-top:10px">' + distbar(t.cnt) + distTxt(t.cnt) + '</div></section>' : '') +
+    '<section class="card pad"><div class="sec-h" style="margin-bottom:10px"><h2 class="serif" style="font-size:19px">案件一覽</h2><div class="legend"><span><i class="dot" style="background:var(--s-rent)"></i>已出租</span><span><i class="dot" style="background:var(--s-list)"></i>招租中</span><span><i class="dot" style="background:var(--s-prep)"></i>整備中</span><span><i class="dot" style="background:var(--s-spec)"></i>特殊狀況</span></div></div>' +
+    '<div class="tblwrap"><table class="tbl"><thead><tr><th>案件</th><th class="r">單元</th><th>狀態分布</th><th class="r">逾期未收</th><th class="r hide-mob">30 天內到期</th></tr></thead><tbody>' + rows + tot + '</tbody></table></div></section>';
+}
+function pCase(id, sub) {
+  var c = C(id); if (!c) return notFound();
+  var s = caseStats(c); var ks = S.contracts.filter(function (k) { return k.caseId === id; }); var hs = S.houses.filter(function (h) { return h.caseId === id; }); var pk = S.parking.filter(function (p) { return p.caseId === id; });
+  var tab = ['contracts', 'houses', 'parking'].indexOf(sub) >= 0 ? sub : 'units';
+  var endMin = ks.map(function (k) { return k.end; }).sort()[0];
+  var tabs = [['units', '#/case/' + id, '單元 ' + s.us.length], ['contracts', '#/case/' + id + '/contracts', '合約 ' + ks.length], ['houses', '#/case/' + id + '/houses', '房屋 ' + hs.length]];
+  if (pk.length) tabs.push(['parking', '#/case/' + id + '/parking', '車位 ' + pk.length]);
+  var body = '';
+  if (tab === 'units') {
+    var F = { all: '全部', rent: '已出租', list: '招租中', prep: '整備中', spec: '特殊狀況' }; var filt = F[sub] ? sub : 'all';
+    var us = s.us.filter(function (u) { return filt === 'all' || SC[u.status] === filt; });
+    var vac = s.cnt['招租中'] / Math.max(1, s.cnt['招租中'] + s.cnt['已出租']);
+    body = '<p class="muted small" style="margin-bottom:10px">今天的招租空置率 ' + Math.round(vac * 100) + '%（招租中 ÷（招租中＋已出租），不含整備中與特殊狀況；正式版以天數計算，specs/02 §5.2）</p>' +
+      '<div class="filt">' + Object.keys(F).map(function (k) { var n = k === 'all' ? s.us.length : s.cnt[F[k]]; return '<a href="#/case/' + id + '/' + k + '"' + (k === filt ? ' aria-current="page"' : '') + '>' + F[k] + ' ' + n + '</a>'; }).join('') + '</div>' +
+      '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>狀態</th><th>承租人</th><th class="hide-mob">租約迄日</th><th>提醒</th></tr></thead><tbody>' + (us.map(function (u) {
+        var l = activeLease(u.id); var od = l ? arrearsOf(l) : null; var flags = [];
+        if (od && od.months) flags.push('<span class="pill p-amber">逾期 ' + od.months + ' 期</span>');
+        if (l && diff(TODAY, l.end) >= 0 && diff(TODAY, l.end) <= 30) flags.push('<span class="pill p-gray">30 天內到期</span>');
+        if (l && missingDocs(l).length) flags.push('<span class="pill p-gray">缺件 ' + missingDocs(l).length + '</span>');
+        if (S.maint.some(function (m) { return m.unitId === u.id && !m.doneDate; })) flags.push('<span class="pill p-gray">維修中</span>');
+        if (S.settlements.some(function (x) { return x.unitId === u.id && !x.refundedDate; })) flags.push('<span class="pill p-gray">退租結算中</span>');
+        return '<tr class="click" data-go="#/unit/' + u.id + '"><td><a class="rowlink" href="#/unit/' + u.id + '">' + u.code + '</a></td><td>' + chip(u.status) + '</td><td>' + (l ? esc(l.tenant) : '<span class="muted">—</span>') + '</td><td class="num hide-mob">' + (l ? roc(l.end) : '—') + '</td><td>' + flags.join(' ') + '</td></tr>';
+      }).join('') || '<tr><td colspan="5" class="muted">沒有符合的單元</td></tr>') + '</tbody></table></div></section>';
+  } else if (tab === 'contracts') {
+    body = '<p class="rule">一個案件＝一份上層合約；擴充的補充合約列在同一案件，租賃移轉另開新案件（D-109）。租金、租期、出租方、付款方式都以合約為準。修改限管理者，走「案件設定」，每次修改都留一個版本（specs/07 §7）。</p>' + ks.map(contractCard).join('');
+  } else if (tab === 'houses') {
+    body = '<p class="rule">房屋＝租賃標的物（地址、建號、面積、土地標的）。擴充進來的房屋有自己的加入日期與迄日（D-005）；分租套房是一戶房屋拆成多個出租單元。</p><section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>地址</th><th class="r">坪數</th><th>出租單元</th><th class="hide-mob">案場</th><th class="hide-mob">所屬合約</th><th class="hide-mob">加入日期</th></tr></thead><tbody>' +
+      hs.map(function (h) { var us = S.units.filter(function (u) { return u.houseId === h.id; }); return '<tr class="click" data-act="house" data-id="' + h.id + '"><td><a class="rowlink" href="javascript:void 0">' + esc(h.addr) + '</a></td><td class="r num">' + h.ping + '</td><td>' + us.map(function (u) { return u.code; }).join('、') + '</td><td class="hide-mob">' + esc(bldName(h)) + '</td><td class="hide-mob">' + esc(K(h.contractId).no) + '</td><td class="num hide-mob">' + roc(h.join) + '</td></tr>'; }).join('') + '</tbody></table></div></section>';
+  } else {
+    body = '<p class="rule">車位要記錄是否綁在房屋的包租契約內；獨立車位租賃契約常約定不得轉租（D-065）。</p><section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>車位</th><th>綁定方式</th><th>綁定房屋</th><th>可否轉租</th><th>目前</th></tr></thead><tbody>' +
+      pk.map(function (p) { var l = first(S.leases, function (x) { return x.active && x.parking && x.parking.space === p.space; }); return '<tr><td><b>' + p.space + '</b><br><small class="muted">' + p.floor + '｜' + p.area + ' ㎡</small></td><td>' + p.bind + '</td><td>' + (p.houseId ? esc(H(p.houseId).addr) : '—') + '</td><td>' + (p.sublet ? '可' : '<span class="pill p-amber">不可轉租</span>') + '</td><td>' + (l ? uName(l.unitId) + ' ' + esc(l.tenant) + (l.parking.separate ? '｜月租 ' + money(l.parking.rent) : '｜隨房屋租約') : '閒置') + '</td></tr>'; }).join('') + '</tbody></table></div></section>';
+  }
+  return head(c.name, kLabel(id) + '｜最早到期 ' + roc(endMin) + '｜' + esc(ks[0].lessor) + '｜案場：' + esc(caseSites(id).join('、')), '', ['#/cases', '案件']) + tabsNav(tabs, tab) + body;
+}
+function contractCard(k) {
+  var left = diff(TODAY, k.end); var hs = S.houses.filter(function (h) { return h.contractId === k.id; });
+  var kv = function (a, b) { return '<div class="kv"><span>' + a + '</span><span style="text-align:right">' + b + '</span></div>'; };
+  return '<section class="card pad col" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start"><div><h2 class="serif h2s">' + esc(k.name) + '</h2><p class="muted small">合約編號 ' + k.no + '｜' + k.acquire + '｜標的 ' + hs.length + ' 戶</p></div>' +
+    (left <= 183 ? '<span class="pill p-amber">剩 ' + left + ' 天到期</span>' : '<span class="pill p-gray">剩 ' + Math.round(left / 30) + ' 個月</span>') + '</div>' +
+    '<div class="grid2" style="gap:4px 28px">' + kv('出租方', esc(k.lessor)) + kv('政府端案件編號', esc(k.govNo)) + kv('合約期間', roc(k.start) + '–' + roc(k.end)) + kv('免租裝修期', k.free ? roc(k.free[0]) + '–' + roc(k.free[1]) : '無') +
+    kv('目前月租金', '<b class="num">' + money(curRent(k)) + '</b>') + kv('付款', esc(k.pay)) + kv('押金／履約保證金', esc(k.bond)) + kv('是否公證', k.notary) + kv('選擇權', esc(k.options)) + kv('通報義務', esc(k.report)) + kv('租金調整規則', esc(k.adjust)) + kv('火險', esc(k.insurance)) + '</div>' +
+    '<h3 class="serif" style="font-size:16px;margin-top:6px">租金分段（每次調整都新增一段，不覆蓋）</h3><div class="tblwrap"><table class="tbl"><thead><tr><th>生效期間</th><th class="r">月租金</th><th>原因</th><th class="hide-mob">依據</th></tr></thead><tbody>' +
+    k.segments.map(function (g) { return '<tr><td class="num">' + roc(g.from) + '–' + (g.to ? roc(g.to) : '至今') + '</td><td class="r num">' + num(g.rent) + '</td><td>' + esc(g.reason) + '</td><td class="hide-mob">' + esc(g.doc) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+    (isAdmin() ? '<div><button class="btn sm ghost" data-act="stub" data-stub="修改上層合約（案件設定）">修改（管理者）</button></div>' : '') + '</section>';
+}
+function houseModal(h) {
+  var us = S.units.filter(function (u) { return u.houseId === h.id; }); var k = K(h.contractId);
+  var kv = function (a, b) { return '<div class="kv"><span>' + a + '</span><span style="text-align:right">' + b + '</span></div>'; };
+  modal(esc(h.addr), '<div>' + kv('所屬合約', esc(k.name)) + kv('加入日期', roc(h.join)) + kv('合約迄日（房屋自帶）', roc(k.end)) + kv('出租單元', us.map(function (u) { return u.code; }).join('、')) +
+    kv('建號', h.buildNo) + kv('樓層', h.floor + ' 樓') + kv('合約坪數', h.ping + ' 坪') + kv('水號／電號／瓦斯', h.water + '／' + h.elec + '／' + h.gas) + kv('管理費', h.mgmt ? money(h.mgmt) + '／月（坪數 × 60，無條件捨去）' : '—') + kv('應投保火險金額', money(h.fire)) + '</div>' +
+    '<h3 class="serif" style="font-size:16px;margin:12px 0 4px">土地標的（' + h.land.length + ' 筆）</h3>' + h.land.map(function (x) { return '<div class="kv"><span>' + x.sec + ' ' + x.no + '</span><span>' + x.area + ' ㎡｜權利範圍 ' + x.share + '</span></div>'; }).join('') +
+    '<h3 class="serif" style="font-size:16px;margin:12px 0 4px">現況確認（簽約時由主檔帶入）</h3>' + ['消防設施：有滅火器、偵煙器', '滲漏水：無', '輻射屋檢測：無', '海砂屋檢測：無', '非自然死亡情事：無', '供排水：正常'].map(function (x) { return '<div class="kv"><span>' + x.split('：')[0] + '</span><span>' + x.split('：')[1] + '</span></div>'; }).join('') + '<p class="muted small">共 12 項，其餘見合約附件；試用版為假資料。</p>', {});
+}
+
+/* ================= 單戶 ================= */
+var CGEN = '產生合約電子檔（RP-18，D-102）';
+function actionsFor(u, l, res) {
+  var A = []; function add(act, label, o) { o = o || {}; o.act = act; o.label = label; A.push(o); }
+  if (u.status === '整備中') { add('ready', '回報可招租'); add('repair', '報修'); add('stub', '登錄裝修支出', { stub: '裝修支出登錄（空間裝修切齊合約、家具 3–5 年攤提，D-022）' }); add('special', '轉特殊狀況'); }
+  else if (u.status === '招租中') {
+    if (res) { add('sign', '簽約'); var expired = diff(res.holdUntil, TODAY) > 0; add('forfeit', '訂金沒收', { disabled: expired ? '' : '保留期限 ' + roc(res.holdUntil) + ' 當天仍可簽約，次日起才能沒收（D-044）' }); add('res-return', '訂金退還'); }
+    else { add('reserve', '收訂'); add('sign', '簽約'); }
+    add('stub', '產生合約電子檔', { stub: CGEN }); add('repair', '報修'); add('special', '轉特殊狀況');
+  } else if (u.status === '已出租' && l) {
+    var ar = arrearsOf(l); var bp = S.notices.some(function (n) { return n.leaseId === l.id && n.status === '待確認'; });
+    add('pay', '登錄收款'); add('repair', '報修'); add('expense', '登錄費用'); add('contact', '聯繫紀錄'); add('renew', '續約意向');
+    add('stub', '產生合約電子檔', { stub: CGEN });
+    add('renew-lease', '建立續約合約', { disabled: l.renew === '續約' ? '' : '先把續約意向登錄為「續約」（目前：' + l.renew + '）' });
+    add('notice-make', '存證信函', { disabled: !ar.months ? '目前沒有逾期欠款，不需要發存證信函（D-053）' : ar.pending ? '已有一份待主管確認的存證信函' : ar.sentThisMonth ? '本月已發過存證信函（每月一封）' : '' });
+    add('breach', '違約提醒', { disabled: bp ? '已有一份待主管確認的發文' : '' });
+    add('early-term', '提前解約', { disabled: l.term ? '已約定 ' + roc(l.term.date) + ' 提前終止' : '' });
+    if (u.caseId === 'c3') { add('occupancy', '入住人數異動'); add('visitor', '訪客過夜'); }
+    add('moveout', '退租點交');
+  } else if (u.status === '特殊狀況') { add('restore', '恢復整備', { to: '整備中' }); add('restore', '恢復招租', { to: '招租中' }); }
+  return A;
+}
+function actBtn(a, u, l, res, cls) {
+  var attrs = ' data-act="' + a.act + '" data-u="' + u.id + '"' + (l ? ' data-l="' + l.id + '"' : '') + (res ? ' data-r="' + res.id + '"' : '') + (a.to ? ' data-to="' + a.to + '"' : '') + (a.stub ? ' data-stub="' + a.stub + '"' : '');
+  return '<button type="button" class="' + cls + '"' + attrs + (a.disabled ? ' disabled aria-describedby="why"' : '') + '>' + a.label + '</button>';
+}
+function settlementPanel(s) {
+  var l = stLease(s); var start = refundStart(s); var bl = refundBlockers(s); var up = utilPending(s);
+  var step = function (done, now, label, n) { return '<li class="' + (done ? 'done' : now ? 'now' : 'todo') + '"><i>' + (done ? ic('check', 14, 3) : n) + '</i>' + label + '</li>'; };
+  var cur = !s.draftOk ? 2 : !s.signedDate ? 3 : 4;
+  var chk = function (ok, label, date, act, btn, dis) { return '<div class="check">' + (ok ? '<span class="ok">' + ic('check', 20, 2.2) + '</span>' : '<span class="muted">' + ic('clock', 20) + '</span>') + '<span style="flex:1">' + label + '</span>' + (ok ? '<span class="muted small num">' + (date ? roc(date) : '') + '</span>' : '<button class="btn sm outline" data-act="st" data-s="' + s.id + '" data-f="' + act + '"' + (dis ? ' disabled title="' + dis + '"' : '') + '>' + btn + '</button>') + '</div>'; };
+  var line = function (n, a, b, strong) { return '<div class="kv"' + (strong ? ' style="border-top:1px solid var(--line2);margin-top:6px;padding-top:10px;font-weight:700"' : '') + '><span' + (strong ? ' style="color:var(--text)"' : '') + '>' + (n ? n + '. ' : '') + a + '</span><span class="num">' + b + '</span></div>'; };
+  var U3 = { water: ['6', '應扣水費'], elec: ['7', '應扣電費'], gas: ['8', '應扣瓦斯費'] };
+  var signDis = up.length ? '水電瓦斯仍「待結清」，完整版要有實際金額（D-050）' : !s.draftOk ? '要先完成初稿確認' : '';
+  var CK = [['meter', '拍表（水、電、瓦斯）'], ['settle', '水電瓦斯過戶結清（退租前的水費差額由承租人負擔）'], ['rename', '戶名改回公司（依產權機關規定，需工商憑證）'], ['keys', '鑰匙、門卡收回'], ['photo', '退租點交照片已存 NAS（只提醒、不擋退款，D-112）']];
+  return '<section class="card pad col" aria-labelledby="st-h"><h2 class="h2s serif" id="st-h">退租結算｜' + esc(l.tenant) + '（租約迄日 ' + roc(l.end) + '）</h2>' +
+    '<ol class="steps" aria-label="退租進度">' + step(true, false, '點交', 1) + step(!!s.draftOk, cur === 2, '初稿確認', 2) + step(!!s.signedDate, cur === 3, '完整版簽名', 3) + step(!!s.refundedDate, cur === 4 && !s.refundedDate, '退款', 4) + '</ol>' +
+    '<div>' + line('1', '應退押金', money(l.deposit)) + (l.deco ? line('1-2', '應退裝潢保證金（與押金分列）', money(l.deco)) : '') +
+    s.refundItems.map(function (x) { return line('2', esc(x.item), money(x.amount)); }).join('') +
+    s.deductItems.map(function (x) { return line('', '應扣｜' + esc(x.item), '−' + money(x.amount)); }).join('') +
+    ['water', 'elec', 'gas'].map(function (k) { return line(U3[k][0], U3[k][1], s.utils[k] == null ? '<span class="pill p-amber">待結清</span>' : '−' + money(s.utils[k])); }).join('') +
+    line('', '合計應退金額（系統自動加總）', up.length ? '結清後計算' : money(stRefundTotal(s)), true) + '</div>' +
+    (up.length && !s.refundedDate ? '<div><button class="btn sm outline" data-act="st" data-s="' + s.id + '" data-f="util">登錄水電瓦斯結清金額</button></div>' : '') +
+    '<details><summary class="small" style="cursor:pointer;min-height:32px">退租檢查項目（' + CK.filter(function (x) { return s.checks[x[0]]; }).length + '/' + CK.length + '）</summary>' +
+    CK.map(function (x) { return '<label class="check"><input type="checkbox" data-change="st-check" data-s="' + s.id + '" data-k="' + x[0] + '"' + (s.checks[x[0]] ? ' checked' : '') + ' style="width:22px;height:22px;accent-color:var(--accent)"><span>' + x[1] + '</span></label>'; }).join('') + '</details>' +
+    (s.refundedDate ? '<div class="check"><span class="ok">' + ic('check', 20, 2.2) + '</span>已於 ' + roc(s.refundedDate) + ' 退款，結算完成；未沖應收已以押金扣抵</div>' :
+      '<h3 class="h2s serif" style="font-size:16px">退款前要齊備</h3>' +
+      chk(!!s.draftOk, '承租人確認結算初稿', s.draftOk, 'draft', '登錄已確認') +
+      chk(!!s.signedDate, '完整版已簽名', s.signedDate, 'sign', '登錄簽名', signDis) +
+      (s.signedDate ? '' : signDis ? '<p class="why">「登錄簽名」目前無法執行：' + signDis + '</p>' : '') +
+      chk(!!s.passbookDate, '存摺影本已收', s.passbookDate, 'passbook', '登錄收件') +
+      '<label class="check"><input type="checkbox" data-change="st-name" data-s="' + s.id + '"' + (s.nameMatch ? ' checked' : '') + ' style="width:22px;height:22px;accent-color:var(--accent)"><span style="flex:1">退款帳戶戶名與承租人相同</span><span class="muted small">（試用）可取消勾選以測試阻擋</span></label>' +
+      (s.residency ? (s.movedOutDate ? chk(true, '戶籍已遷出', s.movedOutDate) : '<div class="warnbox">' + ic('alert', 20, 2) + '<span style="display:flex;flex-direction:column;gap:8px"><span><b>戶籍尚未遷出</b>：承租人設籍本址，確認遷出後才能退款，退款期限也從那天起算</span><button class="btn sm outline" style="align-self:flex-start" data-act="st" data-s="' + s.id + '" data-f="moved">登錄遷出確認</button></span></div>') : '<div class="check"><span class="ok">' + ic('check', 20, 2.2) + '</span>承租人未在本址設籍，不需確認遷出</div>') +
+      '<p class="small ' + (start ? '' : 'muted') + '">' + (start ? '退款期限 <b>' + roc(addWorkdays(start, 3)) + '</b>（起算日 ' + roc(start) + '＋3 個工作天）' : '退款期限：條件齊備後才開始起算（D-054）') + '</p>' +
+      '<button type="button" class="btn primary" data-act="st" data-s="' + s.id + '" data-f="refund"' + (bl.length ? ' disabled aria-describedby="stwhy"' : '') + '>送出退款</button>' +
+      (bl.length ? '<div class="why" id="stwhy"><b>尚無法退款：</b>' + bl.map(function (w) { return '<span>・' + w + '</span>'; }).join('') + '</div>' : '')) + '</section>';
+}
+function recentRecords(u) {
+  var lids = S.leases.filter(function (l) { return l.unitId === u.id; }).map(function (l) { return l.id; });
+  var R = [];
+  S.contacts.forEach(function (k) { if (lids.indexOf(k.leaseId) >= 0) R.push([k.date, k.kind + '｜' + k.text]); });
+  S.maint.forEach(function (m) { if (m.unitId === u.id) R.push(isRepair(m) ? [m.reportDate, '報修｜' + m.item + (m.doneDate ? '（已完工）' : '（處理中）')] : [m.doneDate, m.cat + '｜' + m.item + ' ' + money(m.cost)]); });
+  S.payments.forEach(function (p) { if (lids.indexOf(p.leaseId) >= 0) R.push([p.date, '收款｜' + money(p.amount)]); });
+  S.notices.forEach(function (n) { if (lids.indexOf(n.leaseId) >= 0) R.push([n.created, '發文｜' + n.no + ' ' + n.kind + '（' + n.status + '）']); });
+  S.leases.forEach(function (l) { if (l.unitId !== u.id) return; R.push([l.signDate, '簽約｜' + l.tenant + (l.source === '續約' ? '（續約）' : '') + '，租期 ' + roc(l.start) + '–' + roc(l.end)]); R.push([l.start, (l.start > TODAY ? '起租（預定）｜' : '起租｜') + l.tenant]); });
+  S.settlements.forEach(function (s) { if (s.unitId === u.id) R.push([s.moveOutDate, '退租點交｜' + stLease(s).tenant]); });
+  S.calEvents.forEach(function (e) { if (e.unitId === u.id) R.push([e.date, '日曆｜' + e.type]); });
+  R.sort(function (a, b) { return a[0] < b[0] ? 1 : -1; });
+  return '<section class="card pad" aria-labelledby="rec-h"><h2 class="h2s serif" id="rec-h" style="margin-bottom:6px">最近紀錄</h2>' + (R.length ? '<div class="recs">' + R.slice(0, 7).map(function (x) { return '<div class="rec"><span>' + esc(x[1]) + '</span><span class="muted num">' + roc(x[0]) + '</span></div>'; }).join('') + '</div>' : '<p class="muted small">尚無紀錄</p>') + '</section>';
+}
+function docsCard(l) {
+  var miss = missingDocs(l);
+  var items = [['phone', '承租人電話', !!l.phone, false], ['addr', '戶籍地址', l.docs.addr, true], ['guar', l.guarantor ? '連帶保證人 ' + l.guarantor.name + (l.guarantor.phone ? '' : '（缺電話）') : '無保證人 → 裝潢保證金 ' + (l.deco ? '已收' : '未收'), !!(l.guarantor ? l.guarantor.phone : l.deco), false], ['life', '珍愛生命條款', l.docs.life, true], ['idT', '承租人證件影本', l.docs.idT, true], ['idG', '保證人證件影本', l.docs.idG, true], ['scan', '合約掃描', l.docs.scan, true], ['efile', '電子檔', l.docs.efile, true], ['photoIn', '起租點交照片已存 NAS（只提醒、不擋流程，D-112）', l.docs.photoIn, true]].filter(function (x) { return (x[0] !== 'idG' || l.guarantor) && (x[0] !== 'photoIn' || l.start <= TODAY); });
+  var short = diff(l.start, l.end) < 364;
+  return '<details class="card pad"' + (miss.length ? ' open' : '') + '><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:32px"><b class="serif" style="font-size:17px">簽約要件</b>' + (miss.length ? '<span class="pill p-amber">缺 ' + miss.length + ' 項</span>' : '<span class="pill p-ok">齊備</span>') + '</summary>' +
+    items.map(function (x) { return '<div class="check"><span class="' + (x[2] ? 'ok' : 'muted') + '">' + ic(x[2] ? 'check' : 'alert', 20, 2) + '</span><span style="flex:1">' + x[1] + '</span>' + (!x[2] && x[3] ? '<button class="btn sm outline" data-act="doc-ok" data-l="' + l.id + '" data-k="' + x[0] + '">登錄齊備</button>' : '') + '</div>'; }).join('') +
+    '<p class="muted small">國籍別：' + l.nat + (l.nat === '外國' ? '（證件為護照＋居留證）' : '') + (short ? '｜<b>未滿一年租約</b>（影響申報豁免判定）' : '') + '｜滯納金條款：' + (l.lateFee ? '有' : '無') + '（依適用範本帶入、可逐約修改，D-103）</p></details>';
+}
+function pUnit(id) {
+  var u = U(id); if (!u) return notFound();
+  var c = C(u.caseId); var l = activeLease(u.id); var h = H(u.houseId); var k = K(h.contractId);
+  var res = first(S.reservations, function (r) { return r.unitId === u.id && r.status === '保留中'; });
+  var st = S.settlements.filter(function (x) { return x.unitId === u.id; }).sort(function (a, b) { return (a.refundedDate ? 1 : 0) - (b.refundedDate ? 1 : 0); })[0];
+  if (st && st.refundedDate && diff(st.refundedDate, TODAY) > 0) st = null;
+  var info = '';
+  if (l) {
+    var open = leaseOpen(l.id); var ar = arrearsOf(l);
+    info = (l.term ? '<div class="warnbox">' + ic('alert', 20, 2) + '<span>已約定<b>提前終止</b>：終止日 ' + roc(l.term.date) + '（' + esc(l.term.type) + '）。終止日當天做退租點交。</span></div>' : '') +
+      '<section class="card pad col" aria-label="承租人"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="muted small">承租人' + (l.source === '續約' ? '（續約）' : '') + '</div><div style="font-size:18px;font-weight:500">' + esc(l.tenant) + '</div></div><span class="tag">續約意向：' + l.renew + '</span></div>' +
+      '<div class="kv"><span>電話</span><span class="num">' + esc(l.phone) + '</span></div>' +
+      '<div class="kv"><span>身分證字號</span><span style="display:flex;gap:8px;align-items:center"><span class="num" id="idno">A1●●●●●' + String(l.id).replace(/\D/g, '').padStart(3, '0').slice(-3) + '</span><button class="btn sm ghost" data-act="reveal">顯示</button></span></div>' +
+      '<div class="kv"><span>連帶保證人</span><span>' + (l.guarantor ? esc(l.guarantor.name) + (l.guarantor.phone ? '｜' + esc(l.guarantor.phone) : '｜<span class="pill p-amber">缺電話</span>') : '無（已收裝潢保證金）') + '</span></div>' +
+      '<div class="kv"><span>管理費</span><span>' + mgmtText(l) + '</span></div>' +
+      '<div class="kv"><span>是否在本址設籍</span><span>' + (l.residency ? '是（退租時須確認遷出）' : '否') + '</span></div>' +
+      (l.occupants ? '<div class="kv"><span>實際入住人數</span><span>' + l.occupants + ' 人（公共水費按人數分攤）</span></div>' : '') +
+      (l.parking ? '<div class="kv"><span>車位</span><span>' + l.parking.space + (l.parking.separate ? '｜月租 ' + money(l.parking.rent) : '｜隨房屋租約、不另計價') + '</span></div>' : '') + '</section>' +
+      '<div class="facts"><div class="fact"><span>租期</span><b>' + roc(l.start) + '–' + roc(l.end) + '</b></div><div class="fact"><span>簽約日（承租人簽名日）</span><b>' + roc(l.signDate) + '</b><small class="muted">申報期限 ' + roc(addDays(l.signDate, 30)) + (l.signDate > l.start ? '｜簽約日晚於起租日，主管機關必查' : '') + '</small></div><div class="fact"><span>月租金｜每月 ' + l.dueDay + ' 日繳</span><b>' + money(l.rent) + '</b>' + (l.mgmtMode === '另計' ? '<small class="muted">＋管理費 ' + num(l.mgmt) + '（另計）</small>' : l.mgmt ? '<small class="muted">已含管理費</small>' : '') + '</div>' +
+      '<div class="fact"><span>租約押金' + (l.deco ? '＋裝潢保證金' : '') + '</span><b>' + money(l.deposit) + (l.deco ? '＋' + num(l.deco) : '') + '</b></div>' +
+      '<div class="fact"><span>未沖應收</span><b>' + (open ? money(open) : '無欠款') + '</b>' + (open ? '<small class="muted">' + (ar.months ? '逾期 ' + num(ar.amount) + '（' + ar.months + ' 期）' + (open > ar.amount ? '＋未逾期 ' + num(open - ar.amount) : '') : '均未逾期') + '<br>' + itemBreak(leaseRecs(l.id)) + '</small>' : '') + (lateTrial(l) ? '<small class="muted">另有遲繳違約金試算 ' + num(lateTrial(l)) + '（尚未入帳，<a href="#/billing/late">看明細</a>）</small>' : '') + '</div></div>' + docsCard(l);
+  } else if (res) {
+    var exp = diff(res.holdUntil, TODAY) > 0;
+    info = '<section class="card pad col" aria-label="訂金"><h2 class="h2s serif">已收訂，保留中</h2><div class="kv"><span>付訂人</span><span>' + esc(res.payer) + '｜' + esc(res.phone) + '</span></div><div class="kv"><span>訂金</span><span class="num">' + money(res.amount) + '（收訂日 ' + roc(res.date) + '）</span></div><div class="kv"><span>保留期限</span><span class="num">' + roc(res.holdUntil) + (exp ? ' <span class="pill p-amber">已過期 ' + diff(res.holdUntil, TODAY) + ' 天</span>' : '') + '</span></div></section>';
+  } else if (u.status === '招租中') {
+    info = '<div class="facts"><div class="fact"><span>招租定價</span><b>' + money(u.listPrice) + '</b></div><div class="fact"><span>招租起日</span><b>' + roc(u.statusSince) + '（' + diff(u.statusSince, TODAY) + ' 天）</b></div></div>';
+  } else if (u.status === '整備中') {
+    info = '<div class="facts"><div class="fact"><span>整備起日</span><b>' + roc(u.statusSince) + '（' + diff(u.statusSince, TODAY) + ' 天）</b></div><div class="fact"><span>招租定價</span><b>' + money(u.listPrice) + '</b></div></div>';
+  } else if (u.status === '特殊狀況') {
+    info = '<section class="card pad"><div class="muted small">特殊狀況說明</div><div>' + esc(u.note) + '</div><div class="muted small" style="margin-top:6px">自 ' + roc(u.statusSince) + ' 起</div></section>';
+  }
+  var A = actionsFor(u, l, res); var dis = A.filter(function (a) { return a.disabled; });
+  var acts = '<section class="card pad col" aria-labelledby="act-h"><h2 class="h2s serif" id="act-h">可執行動作</h2>' +
+    '<div class="acts3">' + A.slice(0, 3).map(function (a, i) { return actBtn(a, u, l, res, 'btn ' + (i === 0 ? 'primary' : 'outline')); }).join('') + '</div>' +
+    (A.length > 3 ? '<div class="actchips">' + A.slice(3).map(function (a) { return actBtn(a, u, l, res, 'chipbtn'); }).join('') + '</div>' : '') +
+    (dis.length ? '<div class="why" id="why">' + dis.map(function (a) { return '<span><b>「' + a.label + '」目前無法執行：</b>' + a.disabled + '</span>'; }).join('') + '</div>' : '') +
+    '<p class="muted small">僅列出「' + u.status + '」狀態可執行的動作' + (u.status === '已出租' ? '；空置單元改為收訂、簽約' : '') + '</p></section>';
+  var sub = c.name + '｜案場 ' + esc(bldName(h)) + (u.building ? ' ' + u.building : '') + '｜' + u.type + '｜日曆寫法：' + u.aliases.join('、') +
+    '<br><a href="javascript:void 0" data-act="house" data-id="' + h.id + '">' + esc(h.addr) + '</a>｜所屬合約 <a href="#/case/' + c.id + '/contracts">' + esc(k.no) + '</a>，迄日 ' + roc(k.end);
+  return head(u.code + ' ' + chip(u.status), sub, '', ['#/case/' + c.id, c.name]) +
+    '<div class="upage"><div class="col">' + info + (st ? settlementPanel(st) : '') + '</div><div class="col">' + acts + recentRecords(u) + '</div></div>';
+}
+
+/* ================= 帳務 ================= */
+function pBilling(tab) {
+  var T = { open: '應收與收款', arrears: '催繳', late: '遲繳違約金', deposits: '擔保金與設算息', recon: '對帳' };
+  if (tab === 'recon' && !isAdmin()) tab = 'open';
+  if (!T[tab]) tab = 'open';
+  var tabs = '<nav class="tabs" aria-label="帳務分類">' + Object.keys(T).filter(function (k) { return k !== 'recon' || isAdmin(); }).map(function (k) { return '<a href="#/billing/' + k + '"' + (k === tab ? ' aria-current="page"' : '') + '>' + T[k] + (k === 'recon' ? '<span class="tag">限管理者</span>' : '') + '</a>'; }).join('') + '</nav>';
+  var body = '';
+  if (tab === 'open') {
+    var oct = S.receivables.filter(function (r) { return r.month === '2026-10' && ['租約押金', '裝潢保證金', '押金差額補收'].indexOf(r.item) < 0 && inGrp(U(L(r.leaseId).unitId).caseId); });
+    var due = sum(oct, function (r) { return r.amount; }), paid = sum(oct, function (r) { return r.paid; });
+    var rows = S.receivables.filter(function (r) { return openAmt(r) > 0 && L(r.leaseId).active && inGrp(U(L(r.leaseId).unitId).caseId); }).sort(function (a, b) { return a.due < b.due ? -1 : 1; });
+    body = '<section class="card pad" style="margin-bottom:18px"><div class="prog"><div class="col" style="gap:8px"><h2 class="serif h2s">10 月收款進度</h2><div class="bar" style="width:100%;height:10px"><span style="width:' + Math.round(paid / due * 100) + '%"></span></div><span class="muted small">已收 ' + Math.round(paid / due * 100) + '%</span></div>' +
+      '<div><div class="muted small">本月應收</div><div class="num" style="font-size:22px;font-weight:700">' + money(due) + '</div></div><div><div class="muted small">已收</div><div class="num" style="font-size:22px;font-weight:700">' + money(paid) + '</div></div><div><div class="muted small">尚未收</div><div class="num" style="font-size:22px;font-weight:700">' + money(due - paid) + '</div></div></div></section>' +
+      '<section class="card"><div class="pad" style="padding-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 class="serif h2s">未沖應收</h2><a class="btn sm ghost" href="#/utility">' + ic('drop', 16) + '水電分攤</a></div><div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th>項目</th><th class="hide-mob">月份</th><th class="r">差額</th><th>狀態</th><th></th></tr></thead><tbody>' +
+      rows.map(function (r) { var l = L(r.leaseId); var od = isOverdue(r); var late = diff(addDays(r.due, 5), TODAY); return '<tr><td><a class="rowlink" href="#/unit/' + l.unitId + '">' + uName(l.unitId) + '</a></td><td>' + esc(l.tenant) + '</td><td>' + r.item + '</td><td class="num hide-mob">' + rocM(r.month) + '</td><td class="r num">' + num(openAmt(r)) + '</td><td>' + (od ? '<span class="pill p-amber">逾期 ' + diff(r.due, TODAY) + ' 天</span>' : r.paid ? '<span class="pill p-gray">部分入帳</span>' : '<span class="pill p-gray">' + (late <= 0 && diff(r.due, TODAY) >= 0 ? '寬限期內' : '未到期') + '</span>') + '</td><td><button class="btn sm ghost" data-act="pay" data-l="' + l.id + '">登錄收款</button></td></tr>'; }).join('') + '</tbody></table></div></section>';
+  } else if (tab === 'arrears') {
+    var it = arrearsItems().filter(function (a) { return inGrp(U(a.l.unitId).caseId); });
+    body = '<p class="rule">' + cardDef('arrears').rule + '</p>' + (it.length ? '<div class="card">' + it.map(arrearsRow).join('') + '</div>' : '<div class="empty">目前沒有逾期欠款</div>');
+  } else if (tab === 'late') {
+    var lr = [];
+    S.leases.filter(function (l) { return l.active && inGrp(U(l.unitId).caseId); }).forEach(function (l) { leaseRecs(l.id).filter(function (r) { return r.item === '租金' && isOverdue(r); }).forEach(function (r) { lr.push({ r: r, l: l }); }); });
+    body = '<p class="rule">計息起始日＝繳款日＋緩衝 5 天＋1；違約金＝月租金 × 1% × 遲繳天數（specs/03 §5.1），<b>每個欠款月份各算一筆</b>，只以租金計、管理費不計（🔍 推論，待驗證）。<b>登錄收款把逾期租金沖銷結清時，會要求先決定違約金認列或不認列（不認列須填原因，D-084）</b>。<b>舊約沒有滯納金條款的不計</b>（D-012）。違約金隨次月租金收取，拒繳由租約押金扣除。下表算到今天為止（試算），正式版以實際繳款日計算。</p>' +
+      (lr.length ? '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th>欠款月份</th><th class="hide-mob">計息起始日</th><th class="r">遲繳天數</th><th class="r">違約金試算</th><th></th></tr></thead><tbody>' +
+        lr.map(function (x, i) { var c2 = lateCalc(x.r, x.l); var grp = lr.filter(function (y) { return y.l === x.l; }); var last = grp.length > 1 && (i === lr.length - 1 || lr[i + 1].l !== x.l); return '<tr><td><a class="rowlink" href="#/unit/' + x.l.unitId + '">' + uName(x.l.unitId) + '</a></td><td>' + esc(x.l.tenant) + '</td><td class="num">' + rocM(x.r.month) + '</td><td class="num hide-mob">' + roc(c2.start) + '</td><td class="r num">' + (x.l.lateFee ? c2.days : '—') + '</td><td class="r num">' + (x.l.lateFee ? num(c2.fee) : '<span class="muted small">舊約不計</span>') + '</td><td>' + (x.l.lateFee ? '<button class="btn sm outline" data-act="late-bill" data-id="' + x.r.id + '"' + (x.r.lateBilled ? ' disabled title="已產生"' : '') + '>' + (x.r.lateBilled ? '已產生' : '產生應收') + '</button>' : '') + '</td></tr>' + (last && x.l.lateFee ? '<tr><td colspan="5" class="r"><b>' + uName(x.l.unitId) + ' 小計（' + grp.length + ' 個月）</b></td><td class="r num"><b>' + num(sum(grp, function (y) { return lateCalc(y.r, y.l).fee; })) + '</b></td><td></td></tr>' : ''); }).join('') + '</tbody></table></div></section>' : '<div class="empty">沒有逾期租金</div>');
+  } else if (tab === 'deposits') {
+    var ls = S.leases.filter(function (l) { return l.active; }).sort(function (a, b) { return arrearsOf(b).months - arrearsOf(a).months; });
+    var rate = S.rate || 1.5; var gov = ls.filter(function (l) { return ['c1', 'c2'].indexOf(U(l.unitId).caseId) >= 0; });
+    body = '<p class="rule">催繳時<b>只能用租約押金抵扣</b>，裝潢保證金不參與（D-053、B-1）。兩種擔保金餘額分列（R-014）。</p><section class="card" style="margin-bottom:18px"><div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th class="r">租約押金</th><th class="r">裝潢保證金</th><th>催繳抵扣</th></tr></thead><tbody>' +
+      ls.slice(0, 20).map(function (l) { var ar = arrearsOf(l); return '<tr><td><a class="rowlink" href="#/unit/' + l.unitId + '">' + uName(l.unitId) + '</a></td><td>' + esc(l.tenant) + '</td><td class="r num">' + num(l.deposit) + '</td><td class="r num">' + (l.deco ? num(l.deco) : '—') + '</td><td>' + (ar.months ? '<div class="actchips"><button class="btn sm outline" data-act="stub" data-stub="押金抵扣（依 D-043／D-053 計算）">用押金抵扣</button>' + (l.deco ? '<button class="btn sm" disabled title="裝潢保證金不參與催繳抵扣（D-053）">用裝潢保證金</button>' : '') + '</div>' : '<span class="muted small">無逾期</span>') + '</td></tr>'; }).join('') +
+      '</tbody></table></div><p class="muted small pad" style="padding-top:8px">只列前 20 份（有欠款的排前面）</p></section>' +
+      '<section class="card pad col"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 class="serif h2s">押金設算息（每年辦理一次）</h2><label class="small" style="display:flex;align-items:center;gap:6px">目前生效利率 <input data-change="rate" value="' + rate + '" inputmode="decimal" style="width:80px;height:36px;border-radius:8px;border:1px solid #DCD2C3;padding:0 8px">%</label></div>' +
+      '<p class="muted small">設算息＝ROUND(押金 × 利率 × 滿月數 ÷ 12)；滿月數依合約起訖，未滿一個月不計；發票開給承租人、科目利息收入（D-032）。只適用政府標案案件。利率為試用預設值，可在上方修改。</p>' +
+      '<div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th class="r">押金</th><th class="r">滿月數</th><th class="r">設算息</th></tr></thead><tbody>' +
+      gov.slice(0, 12).map(function (l) { var m = fullMonths(l.start, l.end); return '<tr><td>' + uName(l.unitId) + '</td><td>' + esc(l.tenant) + '</td><td class="r num">' + num(l.deposit) + '</td><td class="r num">' + m + '</td><td class="r num">' + num(Math.round(l.deposit * rate / 100 * m / 12)) + '</td></tr>'; }).join('') +
+      '</tbody></table></div><p class="muted small">共 ' + gov.length + ' 份，合計 ' + money(sum(gov, function (l) { return Math.round(l.deposit * rate / 100 * fullMonths(l.start, l.end) / 12); })) + '（試用版只列前 12 份）</p></section>';
+  } else {
+    var sp = S.suspense;
+    body = '<p class="rule">對帳時無法辨識付款人的款項先<b>暫掛</b>，辨識後再沖銷至該戶（specs/05 §5.5）。一戶可以有多組匯款末五碼，辨識後會記下來，下次自動比對。新的對帳方式待主管決定（Q-039）。</p>' +
+      '<section class="card">' + (sp.length ? sp.map(function (x) { return '<div class="todo-row"><span class="lmain"><b>' + money(x.amount) + '｜末五碼 ' + x.last5 + '</b><small>入帳日 ' + roc(x.date) + (x.status !== '未辨識' ? '｜已沖銷至 ' + esc(x.to) : '') + '</small></span>' + (x.status === '未辨識' ? '<span class="pill p-amber">暫掛中</span><div class="acts"><button class="btn sm outline" data-act="sus-assign" data-id="' + x.id + '">辨識為…</button></div>' : '<span class="pill p-ok">已沖銷</span>') + '</div>'; }).join('') : '<div class="empty">沒有暫掛款項</div>') + '</section>';
+  }
+  return head('帳務', '應收、收款、催繳、擔保金', '<button class="btn primary" data-act="quick" data-k="pay">' + ic('coin') + '登錄收款</button>') + tabs + (['open', 'arrears', 'late'].indexOf(tab) >= 0 ? groupBar() : '') + body;
+}
+
+/* ================= 水電分攤 ================= */
+function utilLeases() { return S.leases.filter(function (l) { return l.active && U(l.unitId).caseId === 'c3' && S.util.rooms[l.id]; }); }
+function utilSnap(u, ls, codeOf, period, genDate) {
+  var price = Math.floor(u.billAmt / u.billDeg * 100) / 100; var priv = u.nowPriv - u.prevPriv; var company = Math.round(priv * price);
+  var occ = sum(ls, function (l) { return l.occupants || 1; });
+  var rows = ls.map(function (l) { var m = u.rooms[l.id]; var o = l.occupants || 1; var w = Math.round(company * o / occ); var e = Math.round(Math.max(0, m.now - m.prev) * u.price); var ce = Math.round(u.commonElec / ls.length); return { code: codeOf(l), tenant: l.tenant, occ: o, w: w, prev: m.prev, now: m.now, e: e, ce: ce, total: w + e + ce }; });
+  return { period: period, genDate: genDate, billDeg: u.billDeg, billAmt: u.billAmt, price: price, priv: priv, company: company, third: u.billAmt - company, occ: occ, roomsN: ls.length, commonElec: u.commonElec, elecPrice: u.price, rows: rows, total: sum(rows, function (x) { return x.total; }) };
+}
+function utilHistTable() {
+  var h = (S.utilHist || []).slice().sort(function (a, b) { return a.period < b.period ? 1 : -1; });
+  return '<section class="card pad" style="margin-top:16px"><h2 class="serif h2s" style="margin-bottom:6px">歷期分攤紀錄</h2><p class="muted small" style="margin-bottom:10px">每期保存帳單、分攤基數與各戶明細。人數、房間數以當期為準，事後補登不追溯（D-107）；紀錄不可刪除，只能作廢（D-108）。</p>' +
+    (h.length ? '<div class="tblwrap"><table class="tbl"><thead><tr><th>期別</th><th class="r">水費帳單</th><th class="r">單價</th><th class="r">公司應付</th><th class="r hide-mob">其他使用者</th><th class="r">人數／房數</th><th class="r">向房客請款</th><th class="hide-mob">產生日</th><th></th></tr></thead><tbody>' +
+      h.map(function (x) { return '<tr><td class="num">' + rocM(x.period) + '</td><td class="r num">' + num(x.billAmt) + '<br><small class="muted">' + num(x.billDeg) + ' 度</small></td><td class="r num">' + x.price.toFixed(2) + '</td><td class="r num">' + num(x.company) + '</td><td class="r num hide-mob">' + num(x.third) + '</td><td class="r num">' + x.occ + ' 人／' + x.roomsN + ' 間</td><td class="r num"><b>' + num(x.total) + '</b></td><td class="num hide-mob">' + roc(x.genDate) + '</td><td><button class="btn sm ghost" data-act="util-hist" data-p="' + x.period + '">明細</button></td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">尚無紀錄</div>') + '</section>';
+}
+function utilCalc() {
+  var u = S.util; var price = Math.floor(u.billAmt / u.billDeg * 100) / 100; var priv = u.nowPriv - u.prevPriv; var company = Math.round(priv * price);
+  var ls = S.leases.filter(function (l) { return l.active && U(l.unitId).caseId === 'c3' && u.rooms[l.id]; });
+  var occ = sum(ls, function (l) { return l.occupants || 1; });
+  var rows = ls.map(function (l) { var m = u.rooms[l.id]; var w = Math.round(company * (l.occupants || 1) / occ); var e = Math.round(Math.max(0, m.now - m.prev) * u.price); var ce = Math.round(u.commonElec / ls.length); return { l: l, m: m, w: w, e: e, ce: ce, total: w + e + ce }; });
+  return { price: price, priv: priv, company: company, third: u.billAmt - company, occ: occ, rows: rows };
+}
+function utilTable() {
+  var k = utilCalc();
+  return '<div class="grid2" style="margin-bottom:12px"><div class="fact"><span>單價（總金額 ÷ 總度數，捨去至小數 2 位）</span><b>' + k.price.toFixed(2) + ' 元／度</b></div><div class="fact"><span>公司應付水費（私表 ' + k.priv + ' 度 × 單價，四捨五入）</span><b>' + money(k.company) + '</b></div><div class="fact"><span>其他使用者應付（帳單 − 公司應付）</span><b>' + money(k.third) + '</b></div><div class="fact"><span>分攤人數（按實際入住人數）</span><b>' + k.occ + ' 人</b></div></div>' +
+    '<div class="tblwrap"><table class="tbl"><thead><tr><th>房間</th><th>承租人</th><th class="r">人數</th><th class="r">公共水費</th><th>房間電表（上期 → 本期）</th><th class="r">電費</th><th class="r">公電</th><th class="r">合計</th></tr></thead><tbody>' +
+    k.rows.map(function (x) { return '<tr><td>' + U(x.l.unitId).code + '</td><td>' + esc(x.l.tenant) + '</td><td class="r num">' + (x.l.occupants || 1) + '</td><td class="r num">' + num(x.w) + '</td><td class="num"><input data-util-room="' + x.l.id + '" data-f="prev" value="' + x.m.prev + '" inputmode="numeric" style="width:70px;height:34px;border:1px solid #DCD2C3;border-radius:8px;padding:0 6px;background:#fff;color:var(--text)"> → <input data-util-room="' + x.l.id + '" data-f="now" value="' + x.m.now + '" inputmode="numeric" style="width:70px;height:34px;border:1px solid #DCD2C3;border-radius:8px;padding:0 6px;background:#fff;color:var(--text)"></td><td class="r num">' + num(x.e) + '</td><td class="r num">' + num(x.ce) + '</td><td class="r num"><b>' + num(x.total) + '</b></td></tr>'; }).join('') +
+    '</tbody></table></div><p class="muted small" style="margin-top:8px">合計向房客請款 ' + money(sum(k.rows, function (x) { return x.total; })) + '（' + k.rows.length + ' 間）</p>';
+}
+function pUtility() {
+  var u = S.util; var f = function (key, label, hint) { return fld(label, '<input data-util="' + key + '" value="' + u[key] + '" inputmode="decimal">', hint); };
+  return head('水電分攤', '青田街（分租套房）｜115/09 帳單', '', ['#/billing', '帳務']) +
+    '<p class="rule">依 specs/05 §1.0：<b>水費</b>先算公司應付（私表度數 × 單價，單價捨去至小數 2 位），再按<b>實際入住人數</b>分給房客；<b>房間電費</b>＝度數 × 電價；<b>公電</b>按房間數均分。抄表以拍表日為準、不按日換算（D-034）。試用版不做期中入住的天數加權。計算過程全部留下，事後可以重算（這正是現行手寫便條做不到的）。</p>' +
+    '<section class="card pad" style="margin-bottom:16px"><h2 class="serif h2s">帳單與私表</h2><div class="grid3">' + f('billDeg', '水費帳單總度數') + f('billAmt', '水費帳單應繳總金額') + f('prevPriv', '私表上期讀數') + f('nowPriv', '私表本期讀數') + f('commonElec', '公電帳單金額') + f('price', '電價（元／度）', '試用值；正式版取台電當期電價') + '</div></section>' +
+    '<section class="card pad"><h2 class="serif h2s" style="margin-bottom:10px">分攤結果</h2><div id="utilTable">' + utilTable() + '</div>' +
+    '<div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn primary" data-act="util-gen"' + (S.utilDone ? ' disabled' : '') + '>產生 9 月水電費應收</button>' + (S.utilDone ? '<span class="muted small">9 月已產生，不能重複產生</span>' : '<span class="muted small">會在每間的應收加一筆「水電費」，並把例行作業打勾</span>') + '</div></section>' + utilHistTable();
+}
+
+/* ================= 維修、參考表、申報、報表、設定 ================= */
+function pMaint() {
+  var open = maintItems(); var exps = S.maint.filter(function (m) { return !isRepair(m); }).sort(function (a, b) { return a.doneDate < b.doneDate ? 1 : -1; }); var done = S.maint.filter(function (m) { return isRepair(m) && m.doneDate; }).sort(function (a, b) { return a.doneDate < b.doneDate ? 1 : -1; });
+  return head('維修與費用', '未結案 ' + open.length + ' 筆', '<a class="btn ghost" href="#/ref/depr">' + ic('book') + '賠償折舊參考表</a><button class="btn outline" data-act="quick" data-k="expense">' + ic('plus') + '登錄費用</button><button class="btn primary" data-act="quick" data-k="repair">' + ic('plus') + '新增報修</button>') +
+    '<p class="rule">完工時要填維修成本、責任歸屬與向房客收費（兩個金額分開記，差額才是公司實際負擔，specs/06 §2）。給排水、電氣等附屬設備現況點交、不向房客求償（D-031）。</p>' +
+    '<section class="sec"><h2 class="serif h2s">未結案</h2>' + (open.length ? '<div class="card">' + open.map(maintRow).join('') + '</div>' : '<div class="empty">沒有未結案的維修</div>') + '</section>' +
+    '<section class="sec"><h2 class="serif h2s">最近完工</h2>' + (done.length ? '<div class="card">' + done.slice(0, 8).map(maintRow).join('') + '</div>' : '<div class="empty">尚無資料</div>') + '</section>' +
+    '<section class="sec"><h2 class="serif h2s">其他費用（發文郵資等）</h2><p class="rule">掛在單元底下、需要登記的零星支出，和維修放在同一個區塊（單元費用紀錄）。<b>是否登記由經辦人員決定</b>；存證費由郵局櫃台填寫，系統不自動計算、不向房客收。這些費用不算進維修統計，只計入案件損益的總成本（D-091）。</p>' + (exps.length ? '<div class="card">' + exps.slice(0, 8).map(expenseRow).join('') + '</div>' : '<div class="empty">尚無資料</div>') + '</section>';
+}
+var LIFE = [['家電', '冷氣', 5], ['家電', '冰箱', 5], ['家電', '洗衣機', 5], ['家電', '熱水器', 5], ['家電', '電視', 3], ['家電', '烘衣機', 3], ['家電', '電磁爐／IH爐', 5], ['家電', '抽油煙機', 5], ['家電', '洗碗機', 5], ['家電', '烘碗機', 5], ['家電', '烤箱／蒸烤箱', 5], ['家電', '浴室暖風機', 5], ['家電', '電子鎖', 3], ['家電', '燈具', 5], ['家電', '微波爐', 5], ['家電', '淨水器', 5], ['家具', '床架', 5], ['家具', '床墊', 3], ['家具', '衣櫃', 5], ['家具', '書桌、餐桌', 5], ['家具', '椅子', 5], ['家具', '沙發', 3], ['家具', '電視櫃', 5], ['家具', '書櫃', 5], ['家具', '窗簾', 5], ['家具', '鞋櫃', 5]];
+function pDepr() {
+  return head('賠償折舊參考表', '家具家電損壞時與房客協商用', '', ['#/maint', '維修']) +
+    '<p class="rule">系統<b>只提供參考表，不計算金額、不推算設備年數</b>——業務自行確認設備已使用幾年，對照下表掌握賠償底價後與房客協商，協商結果人工填入退租收據（D-030、D-046）。賠償底價 ≈ 重購（或維修）金額 × 係數；重購金額取當次報價單或發票。自然老化不列入賠償。</p>' +
+    '<section class="card pad" style="margin-bottom:16px"><h2 class="serif h2s" style="margin-bottom:8px">五級折舊係數</h2><div class="tblwrap"><table class="tbl"><thead><tr><th>已使用</th><th>未滿 1 年</th><th>1～2 年</th><th>2～3 年</th><th>3～5 年</th><th>5 年以上</th></tr></thead><tbody><tr><td>係數</td><td>90%</td><td>70%</td><td>50%</td><td>30%</td><td>10%（殘值下限）</td></tr></tbody></table></div></section>' +
+    '<section class="card pad"><h2 class="serif h2s" style="margin-bottom:8px">品項年限（26 項，與正航攤提共用，D-047）</h2><div class="tblwrap"><table class="tbl"><thead><tr><th>類別</th><th>品項</th><th class="r">年限</th></tr></thead><tbody>' + LIFE.map(function (x) { return '<tr><td>' + x[0] + '</td><td>' + x[1] + '</td><td class="r num">' + x[2] + ' 年</td></tr>'; }).join('') + '</tbody></table></div><p class="muted small" style="margin-top:8px">公司不配置：免治馬桶座、電風扇、除濕機、電鍋、吸塵器。</p></section>';
+}
+function pFilings(tab) {
+  var T = { todo: '待辦', done: '已辦', skip: '決定不申報' }; tab = T[tab] ? tab : 'todo';
+  var body;
+  if (tab === 'todo') { var it = filingItems(); body = it.length ? '<div class="card">' + it.map(filingRow).join('') + '</div>' : '<div class="empty">沒有待辦申報</div>'; }
+  else {
+    var want = tab === 'done' ? '已辦' : '不申報';
+    var fs = S.filings.filter(function (f) { return f.status === want; }).sort(function (a, b) { return a.signDate < b.signDate ? 1 : -1; });
+    body = fs.length ? '<div class="card">' + fs.map(function (f) { return '<div class="todo-row"><span class="lmain"><b>' + uName(f.unitId) + '｜' + f.type + '</b><small>簽約日 ' + roc(f.signDate) + (f.status === '已辦' ? '｜辦理日 ' + roc(f.doneDate) + (f.receipt ? '｜' + esc(f.receipt) : '') : '｜理由：' + esc(f.reason)) + '</small></span></div>'; }).join('') + '</div>' : '<div class="empty">沒有資料</div>';
+  }
+  return head('申報', '實價登錄、地政司包租／轉租申報', '') + '<p class="rule">' + cardDef('filing').rule + '「決定不申報」不需要主管核准，但一定要寫理由（D-066）。</p>' +
+    tabsNav(Object.keys(T).map(function (k) { return [k, '#/filings/' + k, T[k]]; }), tab) + body;
+}
+var REPORTS = [
+  ['對外交付', [['RP-01', '轉租紀錄／住戶清冊（含溢價率）', '產權機關｜每月'], ['RP-02', '實價登錄申報書（系統不產出，只追蹤）', '地政機關｜簽約後'], ['RP-03', '地政司包租／轉租申報（系統不產出，只追蹤）', '內政部地政司｜簽約後'], ['RP-04', '房客水電費請款明細', '房客｜每月或雙月', '#/utility'], ['RP-05', '房屋退租點交確認書', '房客｜退租時'], ['RP-06', '存證信函', '房客｜催繳'], ['RP-07', '違約提醒通知單', '房客｜欠租以外的違約'], ['RP-08', '提前終止租約協議書', '房客｜提前解約'], ['RP-09', '訂金收據', '房客｜付訂時'], ['RP-10', '裝潢保證金收據', '房客｜無保證人簽約時'], ['RP-18', '房客租約（合約電子檔）', '房客｜簽約、續約時']]],
+  ['對內管理', [['RP-11', '房客租約總表／到期清單', '到期預警', '#/report/RP-11'], ['RP-12', '案件逐月損益', '營運監控、投標評估', '#/report/RP-12', true], ['RP-13', '租金收款明細（應收 vs 實收）', '收租對帳', '#/billing/open'], ['RP-14', '遲繳違約金明細', '催繳', '#/billing/late'], ['RP-15', '對外租金／管理費請款單', '房東端應付', '#/report/RP-15'], ['RP-16', '合約要件檢核表', '簽約資料齊備度', '#/report/RP-16'], ['RP-17', '申報狀態追蹤', '防漏申報', '#/filings'], ['VAC', '空置率', '招租能力與資產利用', '#/report/VAC']]]
+];
+function pReports() {
+  return head('報表', '對外文件在試用版不產生檔案；對內報表可點進去看') + REPORTS.map(function (g) {
+    return '<section class="sec"><h2 class="serif h2s">' + g[0] + '</h2><div class="card">' + g[1].filter(function (r) { return !r[4] || isAdmin(); }).map(function (r) {
+      var inner = '<span class="lmain"><b>' + r[1] + (r[4] ? ' <span class="tag">限管理者</span>' : '') + '</b><small>' + (r[0] === 'VAC' ? '' : r[0] + '｜') + r[2] + (r[3] ? '' : '｜試用版不產生檔案') + '</small></span>' + ic('chev', 18, 2);
+      return r[3] ? '<a class="lrow" href="' + r[3] + '">' + inner + '</a>' : '<button type="button" class="lrow" style="width:100%;border:none;border-bottom:1px solid var(--line3);background:none;text-align:left;cursor:pointer" data-act="stub" data-stub="' + r[1] + '">' + inner + '</button>';
+    }).join('') + '</div></section>';
+  }).join('');
+}
+function pReport(code) {
+  var back = ['#/reports', '報表'];
+  if (code === 'RP-11') {
+    var ls = S.leases.filter(function (l) { return l.active; }).sort(function (a, b) { return a.end < b.end ? -1 : 1; }).slice(0, 25);
+    return head('房客租約總表／到期清單', '依租約迄日排序（前 25 筆）', '', back) + '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th>迄日</th><th class="r">剩餘天數</th><th>續約意向</th><th class="hide-mob">上層合約迄日</th></tr></thead><tbody>' +
+      ls.map(function (l) { var d = diff(TODAY, l.end); return '<tr class="click" data-go="#/unit/' + l.unitId + '"><td>' + uName(l.unitId) + '</td><td>' + esc(l.tenant) + '</td><td class="num">' + roc(l.end) + '</td><td class="r num">' + (d <= 30 ? '<span class="pill p-amber">' + d + '</span>' : d) + '</td><td>' + l.renew + '</td><td class="num hide-mob">' + roc(kOfUnit(U(l.unitId)).end) + '</td></tr>'; }).join('') + '</tbody></table></div></section>';
+  }
+  if (code === 'RP-12') {
+    if (!isAdmin()) return head('案件逐月損益', '', '', back) + '<div class="empty">本報表限管理者檢視。</div>';
+    var rows = viewCases().map(function (c) {
+      var inc = sum(S.leases.filter(function (l) { return l.active && U(l.unitId).caseId === c.id; }), function (l) { return l.rent; });
+      var cost = sum(S.contracts.filter(function (k) { return k.caseId === c.id; }), curRent); var q = c.id === 'c2' ? 1 : 1;
+      var mt = sum(S.maint.filter(function (m) { return isRepair(m) && U(m.unitId).caseId === c.id && m.doneDate && m.doneDate.slice(0, 7) === '2026-09'; }), function (m) { return m.cost - m.charge; });
+      var px = sum(S.maint.filter(function (m) { return !isRepair(m) && U(m.unitId).caseId === c.id && m.doneDate && m.doneDate.slice(0, 7) === '2026-09'; }), function (m) { return m.cost; });
+      return [c.name, inc, cost * q, mt, px, inc - cost * q - mt - px];
+    });
+    var tr = [grpCur() ? '群組合計' : '全部合計', 0, 0, 0, 0, 0]; rows.forEach(function (x) { for (var j = 1; j < 6; j++) tr[j] += x[j]; }); rows.push(tr);
+    return head('案件逐月損益', '115/09｜試用版簡化算法', '', back) + groupBar() + '<p class="rule">正式版依 specs/02 的 L0～L7 分層（租金收入 → 租金成本 → 空間裝修攤提 → 家具攤提＋維修 → 管理費 → 人力 → 保險…）與成本分攤口徑計算；試用版只示意畫面，數字是假資料的粗算。一般人員看不到這份報表（D-073）。</p>' +
+      '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>案件</th><th class="r">租金收入</th><th class="r">租金成本</th><th class="r">維修淨支出</th><th class="r">發文郵資</th><th class="r">收支差</th></tr></thead><tbody>' + rows.map(function (x, i) { return '<tr' + (i === rows.length - 1 ? ' style="background:var(--gray-s);font-weight:700"' : '') + '><td>' + x[0] + '</td><td class="r num">' + num(x[1]) + '</td><td class="r num">' + num(x[2]) + '</td><td class="r num">' + num(x[3]) + '</td><td class="r num">' + num(x[4]) + '</td><td class="r num"><b style="color:' + (x[5] < 0 ? 'var(--red)' : 'inherit') + '">' + num(x[5]) + '</b></td></tr>'; }).join('') + '</tbody></table></div><p class="muted small" style="padding:8px 12px">發文郵資只計入案件層總成本，不分到房間；只含有登記的部分（D-091）。</p></section>';
+  }
+  if (code === 'RP-15') return head('對外租金／管理費請款單', '房東端應付', '', back) + '<div class="card">' + S.payables.slice().sort(function (a, b) { return a.dueDate < b.dueDate ? 1 : -1; }).map(payableRow).join('') + '</div>';
+  if (code === 'RP-16') {
+    var ms = S.leases.filter(function (l) { return l.active && missingDocs(l).length; });
+    return head('合約要件檢核表', '有缺件的租約 ' + ms.length + ' 份', '', back) + '<p class="rule">取代現行逐戶勾 P／X 的工作表：電話、戶籍地址、保證人或裝潢保證金、珍愛生命條款、承租人與保證人證件影本、合約掃描、電子檔（specs/03 §2.1），以及起租後的「起租點交照片已存 NAS」（D-112）。</p><div class="card">' +
+      ms.map(function (l) { return '<div class="todo-row"><span class="lmain"><b>' + uName(l.unitId) + '｜' + esc(l.tenant) + '</b><small>缺：' + missingDocs(l).join('、') + '</small></span><div class="acts"><a class="btn sm outline" href="#/unit/' + l.unitId + '">補登</a></div></div>'; }).join('') + '</div>';
+  }
+  if (code === 'VAC') {
+    return head('空置率', '今天的狀態快照', '', back) + '<p class="rule">招租空置率＝招租中 ÷（招租中＋已出租），不含整備中與特殊狀況——衡量招租能力；總空置率＝（整備中＋招租中＋特殊狀況）÷ 全部——衡量資產利用（specs/02 §5.2）。正式版以<b>天數</b>計算；試用版用今天的狀態數量示意。選群組時，合計以組內所有單元重算（D-111）。</p>' +
+      groupBar() + '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>案件</th><th class="r">單元</th><th class="r">招租空置率</th><th class="r">總空置率</th></tr></thead><tbody>' + viewCases().concat([{ id: '_t', name: '<b>' + (grpCur() ? '群組合計' : '全部合計') + '</b>' }]).map(function (c) { var s = c.id === '_t' ? statsFor(viewCases().map(function (x) { return x.id; })) : caseStats(c); var a = s.cnt['招租中'] / Math.max(1, s.cnt['招租中'] + s.cnt['已出租']); var b = (s.us.length - s.cnt['已出租']) / s.us.length; return '<tr' + (c.id === '_t' ? ' style="background:var(--gray-s)"' : '') + '><td>' + c.name + '</td><td class="r num">' + s.us.length + '</td><td class="r num">' + Math.round(a * 100) + '%</td><td class="r num">' + Math.round(b * 100) + '%</td></tr>'; }).join('') + '</tbody></table></div></section>';
+  }
+  if (code === 'RP-01') return head('轉租紀錄／住戶清冊', '產權機關月報', '', back) + '<div class="empty">月報檔案在試用版不產生。正式版依「租賃狀態」四選一規則與溢價率自動帶出（specs/04 §7）。<br><br><button class="btn outline" data-act="task-done" data-id="t5">標記為已送出（試用）</button></div>';
+  return notFound();
+}
+function pMore() {
+  var L2 = [['#/billing', 'wallet', '帳務', '應收、收款、催繳、擔保金'], ['#/utility', 'drop', '水電分攤', '每月帳單分攤與請款'], ['#/maint', 'wrench', '維修與費用', '報修、完工、發文郵資、折舊參考表'], ['#/filings', 'file', '申報', '實價登錄、地政司申報'], ['#/reports', 'chart', '報表', '對外文件與內部報表'], ['#/settings', 'gear', '設定', '試用身分、公司主檔、重設資料']];
+  return mtop() + '<h1 class="serif" style="font-size:25px;margin-bottom:14px">更多</h1><div class="card list">' + L2.map(function (x) { return '<a class="lrow" href="' + x[0] + '"><span class="badge b-gray" style="width:36px;height:36px">' + ic(x[1]) + '</span><span class="lmain"><b>' + x[2] + '</b><small>' + x[3] + '</small></span>' + ic('chev', 18, 2) + '</a>'; }).join('') + '</div>';
+}
+/* 設定依「由什麼決定」分層（D-104、D-109、D-110）：全公司／案件（＝上層合約）／案場（實體大樓或社區，含公共表計） */
+var TPL = { c1: '河岸大樓版', c2: '和平街版', c3: '分租套房版', c4: '一般版', c5: '一般版', c6: '河濱新城版', c7: '河濱新城版', c8: '一般版' };
+var BCFG = {
+  c1: { util: '無（各戶獨立水號、電號）', fee: '水電瓦斯房客自付；管理費依租約（另計／含租金）', mgmt: '坪數 × 60 元（無條件捨去）', park: '車位清潔費 300 元／月' },
+  c2: { util: '無（各戶獨立水號、電號）', fee: '水電瓦斯房客自付；管理費含在租金', mgmt: '—', park: '' },
+  c3: { util: '水費：整棟 1 顆總表，按實際入住人數均分｜公電：按房間數均分｜房間電費：分錶度數 × 電價', fee: '水費含公共分攤另收；電費依分錶；網路含租金', mgmt: '—', park: '' },
+  c4: { util: '無', fee: '水電房客自付；管理費房東負擔', mgmt: '房東負擔', park: '' },
+  c5: { util: '無', fee: '水電房客自付', mgmt: '—', park: '' },
+  c6: { util: '無（各戶獨立水號、電號）', fee: '水電瓦斯房客自付；管理費依租約（另計／含租金）', mgmt: '坪數 × 60 元（河濱新城管委會）', park: '' },
+  c7: { util: '無（各戶獨立水號、電號）', fee: '水電瓦斯房客自付；管理費依租約（另計／含租金）', mgmt: '坪數 × 60 元（河濱新城管委會）', park: '' },
+  c8: { util: '無（各戶獨立水號、電號）', fee: '水電瓦斯房客自付；管理費依租約（另計／含租金）', mgmt: '坪數 × 60 元（河濱新城管委會）', park: '' }
+};
+var SITE_ALIAS = { '河岸路 100 號': '河岸大樓', '河岸路 102 號': '河岸大樓', '河濱路 88 號': '河濱新城', '河濱路 90 號': '河濱新城' }; /* 同一社區多棟＝一個案場（D-110） */
+function bldName(h) { var n = h.addr.replace(/ \d+ 樓.*$/, ''); return SITE_ALIAS[n] || n; }
+function siteList() { var m = {}; S.houses.forEach(function (h) { var n = bldName(h); if (!m[n]) m[n] = { name: n, caseIds: [], units: 0 }; if (m[n].caseIds.indexOf(h.caseId) < 0) m[n].caseIds.push(h.caseId); m[n].units += S.units.filter(function (u) { return u.houseId === h.id; }).length; }); return Object.keys(m).map(function (k) { return m[k]; }); }
+function kvRow(a, b) { return '<div class="kv"><span>' + a + '</span><span style="text-align:right">' + b + '</span></div>'; }
+function cfgGate(t) { return isAdmin() ? '' : head(t, '', '', ['#/settings', '設定']) + '<div class="empty">' + t + '限管理者檢視與修改（D-073）。</div>'; }
+function pCaseCfg() {
+  if (!isAdmin()) return cfgGate('案件設定');
+  var company = '<section class="card pad col" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 class="serif h2s">全公司</h2><span class="tag">所有案件共用</span></div><div class="grid2" style="gap:2px 28px">' +
+    kvRow('房客押金', '2 個月租金') + kvRow('裝潢保證金（無保證人時）', '2 個月租金') + kvRow('家具軟裝攤提年限', '<a href="#/ref/depr">依品項年限表（3～5 年）</a>') + kvRow('平方公尺換算坪', '× 0.3025（÷ 3.3058）') + kvRow('抄表時間差', '以拍表日期為準，不按日換算') + '</div></section>';
+  return head('案件設定', '一個案件＝一份上層合約（含擴充）；公共水電與費用負擔預設在「案場設定」（D-104、D-109、D-110）', '<a class="btn ghost" href="#/sitecfg">案場設定</a><button class="btn primary" data-act="newcase">' + ic('plus') + '新增案件</button>', ['#/settings', '設定']) +
+    '<p class="rule">「新增案件」＝登錄一份新簽的上層合約，再加入房屋與出租單元；擴充的補充合約加在原案件、不另開，租賃移轉另開新案件（D-109）。租金、成本分攤口徑、空間裝修攤提、合約範本跟著<b>案件</b>；公共水電與費用負擔預設跟著<b>案場</b>。要把幾個案件放在一起看，用案件頁的「群組」（D-111）。每次修改都<b>新增一個版本</b>並帶生效日，舊版本保留（specs/07 §7）。</p>' + company +
+    S.cases.map(function (c) {
+      var ks = S.contracts.filter(function (k) { return k.caseId === c.id; }); var st = caseSites(c.id);
+      var log = S.settingLog.filter(function (x) { return x.caseId === c.id; });
+      return '<section class="card pad col" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 class="serif h2s">' + c.name + '</h2><button class="btn sm ghost" data-act="stub" data-stub="修改案件（上層合約）">修改</button></div>' +
+        '<div class="grid2" style="gap:2px 28px">' + kvRow('出租方', esc(ks[0].lessor)) + kvRow('承辦人', esc(c.officer)) + kvRow('房客繳款帳戶', '沿用公司主要帳戶') + kvRow('所在案場', esc(st.join('、'))) + '</div>' +
+        '<div class="tblwrap"><table class="tbl"><thead><tr><th>合約（主約＋擴充）</th><th>成本分攤口徑</th><th>空間裝修攤提</th><th>合約範本</th></tr></thead><tbody>' +
+        ks.map(function (k, i) { return '<tr><td><b>' + esc(k.no) + '</b>' + (i ? '<span class="tag">擴充</span>' : '') + '<br><small class="muted">' + roc(k.start) + '–' + roc(k.end) + '</small></td><td>' + (c.id === 'c2' ? '依合約附表二租金比例' : '按合約坪數比例') + '<br><small class="muted">分租套房再按房間數均分（D-106）</small></td><td class="num">' + fullMonths(k.start, k.end) + ' 個月<br><small class="muted">切齊合約期間</small></td><td>' + TPL[c.id] + '<br><small class="muted">滯納金條款：有（範本預設）</small></td></tr>'; }).join('') + '</tbody></table></div>' +
+        (log.length ? '<div class="muted small">異動紀錄：' + log.map(function (x) { return roc(x.date) + ' ' + x.item + '「' + x.from + '」→「' + x.to + '」（' + x.by + '，' + x.why + '）'; }).join('；') + '</div>' : '') + '</section>';
+    }).join('');
+}
+function pSiteCfg() {
+  if (!isAdmin()) return cfgGate('案場設定');
+  var ss = siteList();
+  return head('案場設定', '案場＝實體大樓或社區；共 ' + ss.length + ' 個（D-110）', '<a class="btn ghost" href="#/casecfg">案件設定</a><button class="btn primary" data-act="stub" data-stub="新增案場（名稱、地址、管委會、公共表計）">' + ic('plus') + '新增案場</button>', ['#/settings', '設定']) +
+    '<p class="rule">公共水電（一顆公共表＝一個分攤群組）、費用負擔預設（合約第五條）、管委會管理費跟著<b>案場</b>，不跟著案件：同一個社區可能有好幾個案件，一個案件的房屋也可能分散在好幾個案場。房屋依地址歸屬案場，不需搬移；登錄錯誤由管理者更正並留紀錄（D-108、D-110）。費用負擔預設帶入租約，個別租約可覆寫（D-095）。</p>' +
+    '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>案場</th><th>房屋所屬案件</th><th class="r">單元</th><th>公共水電（公共表計）</th><th>費用負擔預設（合約第五條）</th><th class="hide-mob">管委會管理費</th></tr></thead><tbody>' +
+    ss.map(function (x) { var bc = BCFG[x.caseIds[0]] || {}; return '<tr><td><b>' + esc(x.name) + '</b></td><td>' + x.caseIds.map(function (id) { return '<a href="#/case/' + id + '">' + C(id).name + '</a>'; }).join('、') + '</td><td class="r num">' + x.units + '</td><td class="small">' + bc.util + '</td><td class="small">' + bc.fee + (bc.park ? '｜' + bc.park : '') + '</td><td class="small hide-mob">' + bc.mgmt + '</td></tr>'; }).join('') + '</tbody></table></div></section>';
+}
+var CO_F = [['name', '公司名稱'], ['taxId', '統一編號'], ['addr', '地址'], ['phone', '電話']];
+function coKv(k, a, b) { return '<div class="kv"><span style="white-space:nowrap">' + a + '</span><span style="display:flex;gap:10px;align-items:center;justify-content:flex-end;text-align:right">' + esc(b) + '<button class="btn sm ghost" data-act="co-edit" data-k="' + k + '">修改</button></span></div>'; }
+function pCompany() {
+  var back = ['#/settings', '設定'];
+  if (!isAdmin()) return head('公司主檔', '', '', back) + '<div class="empty">公司主檔限管理者修改。</div>';
+  var c = S.company;
+  return head('公司主檔', '對外文件的公司資料都從這裡帶入（specs/01 §1.7，D-090）', '', back) +
+    '<p class="rule">地址、電話、收款帳戶可能變更，管理者直接在這裡改。<b>改了以後新產出的文件用新資料；已寄出、已簽、已開的文件保留當時的資料，不回溯。</b>沿用主要帳戶的案件自動跟著改，已另設帳戶的案件不受影響。試用版為假資料。</p>' +
+    '<section class="card pad col" style="max-width:680px;margin-bottom:14px"><h2 class="serif h2s">基本資料</h2>' + CO_F.map(function (x) { return coKv(x[0], x[1], c[x[0]]); }).join('') +
+    '<p class="muted small">用在：住戶清冊標題、退租點交確認書、存證信函寄件人、提前終止協議書甲方、訂金收據收訂人。</p></section>' +
+    '<section class="card pad col" style="max-width:680px;margin-bottom:14px"><h2 class="serif h2s">主要收款帳戶</h2>' + coKv('acct', '帳戶', c.bank + '｜戶名 ' + c.acctName + '｜帳號 ' + c.acct) + '<p class="muted small">房客繳租金、水電費的預設帳戶，印在水電費請款明細的繳款說明（案件可另設，D-087）。</p></section>' +
+    '<section class="card pad col" style="max-width:680px"><h2 class="serif h2s">異動紀錄</h2>' + (S.companyLog.length ? S.companyLog.slice().reverse().map(function (x) { return '<div style="padding:6px 0;border-bottom:1px solid var(--line3)"><b>' + roc(x.date) + '｜' + esc(x.item) + '</b><span class="muted small">（' + esc(x.by) + '）</span><div class="small">「' + esc(x.from) + '」→「' + esc(x.to) + '」</div></div>'; }).join('') : '<p class="muted small">尚無異動</p>') + '</section>';
+}
+function coEdit(k) {
+  var c = S.company; var by = isAdmin() ? '陳經理' : '小林';
+  if (k === 'acct') {
+    modal('修改主要收款帳戶', fld('銀行與分行', inp('bank', c.bank)) + fld('戶名', inp('acctName', c.acctName)) + fld('帳號', inp('acct', c.acct)) + '<p class="muted small">已產出的請款明細不會改；沿用主要帳戶的案件下次產出時用新帳戶。</p>', { submit: '儲存', onSubmit: function (f) {
+      var nb = needText(f.bank, '銀行與分行'), nn = needText(f.acctName, '戶名'), na = needText(f.acct, '帳號'); var old = c.bank + '｜' + c.acctName + '｜' + c.acct, nw = nb + '｜' + nn + '｜' + na;
+      if (old === nw) throw '內容沒有變動'; c.bank = nb; c.acctName = nn; c.acct = na; S.companyLog.push({ date: TODAY, item: '主要收款帳戶', from: old, to: nw, by: by }); return '已更新主要收款帳戶，已記錄異動';
+    } }); return;
+  }
+  var lab = first(CO_F, function (x) { return x[0] === k; })[1];
+  modal('修改' + lab, fld(lab, inp('v', c[k])), { submit: '儲存', onSubmit: function (f) {
+    var v = needText(f.v, lab); if (v === c[k]) throw '內容沒有變動'; if (k === 'taxId' && !/^\d{8}$/.test(v)) throw '統一編號是 8 位數字';
+    S.companyLog.push({ date: TODAY, item: lab, from: c[k], to: v, by: by }); c[k] = v; return '已更新' + lab + '，已記錄異動';
+  } });
+}
+function pSettings() {
+  return head('設定', '試用版設定') +
+    '<section class="card pad col" style="max-width:680px"><h2 class="serif h2s">試用身分</h2><p class="muted small">切換後可比較兩種權限的畫面：一般人員不顯示「待主管確認的發文」、對帳、案件損益報表、案件設定與案場設定，亦無法確認發文。</p>' +
+    '<div class="actchips"><label class="chipbtn" style="display:flex;align-items:center;gap:8px"><input type="radio" name="role" value="admin" data-change="role-radio"' + (isAdmin() ? ' checked' : '') + '>陳經理｜管理者</label><label class="chipbtn" style="display:flex;align-items:center;gap:8px"><input type="radio" name="role" value="staff" data-change="role-radio"' + (!isAdmin() ? ' checked' : '') + '>小林｜一般人員</label></div>' +
+    '<h2 class="serif h2s" style="margin-top:12px">試用資料</h2><p class="muted small">操作紀錄僅存於本裝置瀏覽器，不與他人共用；按「重設試用資料」可回復初始狀態。</p><div><button class="btn outline" data-act="reset">重設試用資料</button></div>' +
+    (isAdmin() ? '<h2 class="serif h2s" style="margin-top:12px">管理者</h2><div class="actchips"><a class="chipbtn" style="display:flex;align-items:center;text-decoration:none" href="#/casecfg">案件設定</a><a class="chipbtn" style="display:flex;align-items:center;text-decoration:none" href="#/sitecfg">案場設定</a><a class="chipbtn" style="display:flex;align-items:center;text-decoration:none" href="#/company">公司主檔</a><button class="chipbtn" data-act="newcase" title="登錄一份新簽的上層合約">新增案件</button><a class="chipbtn" style="display:flex;align-items:center;text-decoration:none" href="#/ref/depr">對照表：設備年限</a>' + ['帳號管理', '資料匯入', '重建摘要'].map(function (x) { return '<button class="chipbtn" data-act="stub" data-stub="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '') +
+    '<h2 class="serif h2s" style="margin-top:12px">關於試用版</h2><p class="small" style="line-height:1.7">本頁為畫面原型，供試用操作流程，非正式系統：資料皆為虛構、日期固定為 115/10/05，不儲存至任何伺服器。操作上找不到功能、步驟過多或內容不清楚之處，請記錄畫面名稱與意見，統一回覆。</p></section>';
+}
+function pSearch() {
+  return mtop(['#/', '首頁']) + '<h1 class="serif" style="font-size:25px;margin-bottom:12px">搜尋</h1><div class="sbox" style="width:100%"><label class="sr" for="mq">搜尋</label>' + ic('search') + '<input id="mq" type="search" autocomplete="off" placeholder="戶號、9-8、青田2、地址、稱呼、電話末碼" data-search="inline" autofocus></div><div id="mres" class="card list" hidden style="margin-top:8px"></div><p class="muted small" style="margin-top:12px">可輸入日曆慣用寫法（如「9-8」「青田2」「松園2A」）、地址片段或電話末 3 碼。</p>';
+}
+function notFound() { return head('查無此頁', '', '', ['#/', '首頁']) + '<div class="empty">查無資料，試用資料可能已重設。</div>'; }
+
+/* ================= 搜尋 ================= */
+function norm(s) { return String(s || '').toLowerCase().replace(/[\s\-－‐]/g, ''); }
+function searchUnits(q) {
+  var raw = String(q || '').trim(); if (!raw) return [];
+  var nq = norm(raw); var dig = raw.replace(/\D/g, '');
+  return S.units.filter(function (u) {
+    var c = C(u.caseId); var l = activeLease(u.id);
+    var keys = [u.code].concat(u.aliases, [c.short + u.code, c.name + u.code, H(u.houseId).addr]).map(norm);
+    if (keys.some(function (k) { return k.indexOf(nq) >= 0; })) return true;
+    if (l && l.tenant.indexOf(raw) >= 0) return true;
+    if (l && dig.length >= 3 && dig.length === raw.replace(/\s/g, '').length && l.phone.replace(/\D/g, '').slice(-dig.length) === dig) return true;
+    return false;
+  }).slice(0, 12);
+}
+function resRow(u, href) { var l = activeLease(u.id); return '<a class="sres" href="' + (href || '#/unit/' + u.id) + '"><span class="lmain"><b>' + uName(u.id) + '</b><small>' + (l ? esc(l.tenant) + '｜' + esc(l.phone) : u.type) + '</small></span>' + chip(u.status) + '</a>'; }
+function resBtn(u, act, id) { var l = activeLease(u.id); return '<button type="button" class="sres" style="width:100%;border:none;background:none;text-align:left;cursor:pointer" data-act="' + act + '" data-id="' + id + '" data-u="' + u.id + '"><span class="lmain"><b>' + uName(u.id) + '</b><small>' + (l ? esc(l.tenant) : u.type) + '</small></span>' + chip(u.status) + '</button>'; }
+function renderSearch(input) {
+  var mode = input.getAttribute('data-search'); var q = input.value; var rs = searchUnits(q);
+  if (mode === 'drop') { var box = $('#sdrop'); if (!q.trim()) { box.hidden = true; return; } box.hidden = false; box.innerHTML = rs.length ? rs.map(function (u) { return resRow(u); }).join('') : '<div class="snone">查無「' + esc(q) + '」，可改用戶號、日曆寫法、地址或電話末 3 碼搜尋</div>'; }
+  if (mode === 'inline') { var m = $('#mres'); if (!q.trim()) { m.hidden = true; return; } m.hidden = false; m.innerHTML = rs.length ? rs.map(function (u) { return resRow(u); }).join('') : '<div class="snone">查無「' + esc(q) + '」</div>'; }
+  if (mode === 'pick') { $('#pres').innerHTML = pickList(q, input.getAttribute('data-k')); }
+}
+
+/* ================= 對話框與提示 ================= */
+var modalSubmit = null;
+function modal(title, body, opt) {
+  opt = opt || {}; modalSubmit = opt.onSubmit || null;
+  $('#modal-root').innerHTML = '<div class="scrim" data-act="close-modal"></div><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt">' + title + '</h2>' + (opt.sub ? '<p class="msub">' + opt.sub + '</p>' : '') +
+    '<form id="mform" novalidate>' + body + '<p class="err" id="merr" role="alert"></p><div class="mact"><button type="button" class="btn ghost" data-act="close-modal">' + (modalSubmit ? '取消' : '關閉') + '</button>' + (modalSubmit ? '<button class="btn primary" type="submit">' + (opt.submit || '確定') + '</button>' : '') + '</div></form></div>';
+  var f = $('#mform input:not([type=hidden]):not([type=checkbox]):not([readonly]), #mform select, #mform textarea'); if (f) setTimeout(function () { f.focus(); }, 30);
+}
+function closeModal() { $('#modal-root').innerHTML = ''; modalSubmit = null; }
+var toastTimer = null;
+function toast(msg) { $('#toast-root').innerHTML = '<div class="toast">' + msg + '</div>'; clearTimeout(toastTimer); toastTimer = setTimeout(function () { $('#toast-root').innerHTML = ''; }, 3800); }
+function fld(label, inner, hint) { return '<label class="fld"><span>' + label + '</span>' + inner + (hint ? '<small>' + hint + '</small>' : '') + '</label>'; }
+function inp(name, val, attrs) { return '<input name="' + name + '" value="' + esc(val == null ? '' : val) + '" ' + (attrs || '') + '>'; }
+function sel(name, opts, cur) { return '<select name="' + name + '">' + opts.map(function (o) { return '<option' + (o === cur ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>'; }
+function dateFld(name, label, val) { return fld(label, inp(name, roc(val), 'inputmode="numeric" autocomplete="off"'), '民國年，例：115/10/05 或 1151005'); }
+function needDate(v, label) { var d = parseRoc(v); if (!d) throw label + '的格式不對，請輸入像 115/10/05 的日期'; return d; }
+function needText(v, label) { if (!String(v || '').trim()) throw '請填寫' + label; return String(v).trim(); }
+function needInt(v, label, allowZero) { var n = Math.round(Number(String(v).replace(/[,\s]/g, ''))); if (isNaN(n) || n < 0 || (!allowZero && !n)) throw label + '要填' + (allowZero ? '0 或正整數' : '正整數'); return n; }
+function optInt(v, label) { return String(v || '').trim() === '' ? null : needInt(v, label, true); }
+
+function pickList(q, kind) {
+  var need = kind === 'pay' || kind === 'contact' || kind.indexOf('sus:') === 0;
+  var us = (q && q.trim() ? searchUnits(q) : S.units.filter(function (u) { return kind === 'status' ? u.status !== '已出租' : true; }).slice(0, 12)).filter(function (u) { return !need || activeLease(u.id); });
+  if (!us.length) return '<div class="snone">查無符合的單元' + (need ? '（需要有租約的單元）' : '') + '</div>';
+  if (kind.indexOf(':') > 0) { var p = kind.split(':'); return us.map(function (u) { return resBtn(u, p[0] === 'cal' ? 'cal-do' : 'sus-do', p[1]); }).join(''); }
+  var suffix = kind === 'status' ? '' : '/' + kind;
+  return us.map(function (u) { return resRow(u, '#/unit/' + u.id + suffix); }).join('');
+}
+function openPick(kind, title, sub) {
+  var T = { expense: '登錄費用：選擇單元', repair: '報修：選擇單元', status: '狀態回報：選擇單元', contact: '聯繫紀錄：選擇單元', pay: '登錄收款：選擇單元' };
+  modal(title || T[kind], '<div class="sbox" style="width:100%">' + ic('search') + '<input type="search" autocomplete="off" aria-label="搜尋單元" placeholder="戶號、日曆寫法、地址、稱呼" data-search="pick" data-k="' + kind + '"></div><div id="pres" class="plist">' + pickList('', kind) + '</div>', { sub: sub || (kind === 'status' ? '預設列出空房（整備中、招租中、特殊狀況）；也可以搜尋' : '可輸入戶號、日曆寫法、地址或稱呼') });
+}
+
+/* ================= 動作 ================= */
+function addFilings(l) { ['實價登錄', '地政司包租／轉租申報'].forEach(function (ty) { S.filings.push({ id: uid('f'), leaseId: l.id, unitId: l.unitId, type: ty, signDate: l.signDate, status: '待辦', doneDate: null, receipt: '', reason: '' }); }); }
+function openAction(act, ds) {
+  var u = ds.u ? U(ds.u) : null; var l = ds.l ? L(ds.l) : null;
+  if (!u && l) u = U(l.unitId);
+  if (act === 'pay') {
+    var open = leaseOpen(l.id);
+    var lo = lateOpenRents(l);
+    modal('登錄收款｜' + uName(l.unitId), fld('收款金額', inp('amt', open || l.rent, 'inputmode="numeric"'), '預設為目前未沖應收合計 ' + money(open)) + dateFld('date', '入帳日', TODAY) + fld('匯款帳號末五碼（選填）', inp('last5', '', 'inputmode="numeric" maxlength="5"'), '本戶已知的末五碼：' + l.last5s.join('、')) +
+      (lo.length ? lateChoiceHtml(l, lo.map(function (r) { return { r: r, c: lateCalc(r, l) }; })) : ''), {
+      sub: '承租人 ' + esc(l.tenant) + '｜試用版會依序沖銷最早的應收', submit: '登錄', onSubmit: function (f) {
+        var amt = needInt(f.amt, '收款金額'); var d = needDate(f.date, '入帳日'); if (f.last5 && !/^\d{5}$/.test(f.last5)) throw '末五碼要剛好 5 位數字';
+        var hits = lateHits(l, amt, d); var dec = lateDecide(hits, f);
+        var al = allocate(l, amt); var lm = lateApply(l, hits, dec);
+        if (f.last5 && l.last5s.indexOf(f.last5) < 0) l.last5s.push(f.last5);
+        S.payments.push({ id: uid('pay'), leaseId: l.id, date: d, amount: amt, last5: f.last5 || '' });
+        return '已登錄 ' + money(amt) + '，沖銷 ' + al.n + ' 筆應收' + (al.left > 0 ? '，溢收 ' + money(al.left) + ' 暫記預收' : '') + lm + (lo.length && !hits.length ? '；逾期租金尚未全數沖銷，違約金持續計算' : '');
+      } });
+  } else if (act === 'repair') {
+    modal('報修｜' + uName(u.id), fld('維修項目', inp('item', '', 'placeholder="例：熱水器不熱"')) + dateFld('date', '報修日', TODAY) + fld('補充說明（選填）', '<textarea name="memo"></textarea>'), { sub: '完工時再填成本、責任歸屬與向房客收費', submit: '建立報修', onSubmit: function (f) {
+      var item = needText(f.item, '維修項目'); var d = needDate(f.date, '報修日');
+      S.maint.push({ id: uid('m'), unitId: u.id, item: item + (f.memo ? '（' + f.memo.trim() + '）' : ''), reportDate: d, doneDate: null, cost: 0, charge: 0, resp: '', erp: '' });
+      return '已建立報修，已列入首頁「維修未結案」';
+    } });
+  } else if (act === 'expense') {
+    var nos = S.notices.filter(function (n) { var ln = L(n.leaseId); return ln && ln.unitId === u.id && n.kind.indexOf('存證信函') === 0; }).map(function (n) { return n.no; });
+    modal('登錄費用｜' + uName(u.id), fld('費用類別', sel('cat', ['發文郵資', '其他'])) + fld('項目', inp('item', ds.no ? '存證信函 ' + ds.no + ' 郵資' : '', 'placeholder="例：存證信函郵資、掛號郵資"')) + '<div class="row2">' + dateFld('date', '支出日', TODAY) + fld('金額', inp('cost', '', 'inputmode="numeric"'), '依郵局收據') + '</div>' +
+      '<div class="row2">' + fld('請款人（代墊人）', inp('payer', isAdmin() ? '陳經理' : '小林')) + fld('正航單號（選填）', inp('erp', '')) + '</div>' + fld('關聯文號（選填）', sel('no', [''].concat(nos), ds.no || ''), nos.length ? '對照對外發文紀錄' : '本戶無存證信函紀錄'), {
+      sub: '是否登記由經辦人員決定；系統不自動計算存證費，亦不向房客收取（D-091）。修繕請使用「報修」。', submit: '登錄', onSubmit: function (f) {
+        var item = needText(f.item, '項目'); var d = needDate(f.date, '支出日'); var c = needInt(f.cost, '金額');
+        S.maint.push({ id: uid('m'), cat: f.cat, unitId: u.id, item: item, reportDate: d, doneDate: d, cost: c, charge: 0, resp: '', erp: f.erp || '', payer: (f.payer || '').trim(), noticeNo: f.no || '' });
+        return '已登錄' + f.cat + ' ' + money(c) + '，列在「維修與費用 → 其他費用」';
+      } });
+  } else if (act === 'contact') {
+    modal('聯繫紀錄｜' + uName(l.unitId), fld('類型', sel('kind', ['催繳', '續約詢問', '提前解約預告', '其他']), '強制登記的三類：催繳、續約詢問、提前解約預告（D-062）') + dateFld('date', '日期', TODAY) + fld('內容', '<textarea name="text" placeholder="例：電話聯繫，房客表示週五前補繳"></textarea>'), { submit: '儲存', onSubmit: function (f) {
+      var t = needText(f.text, '內容'); var d = needDate(f.date, '日期');
+      S.contacts.push({ id: uid('k'), leaseId: l.id, date: d, kind: f.kind, text: t }); return '已儲存聯繫紀錄';
+    } });
+  } else if (act === 'renew') {
+    modal('續約意向｜' + uName(l.unitId), fld('房客的意向', sel('renew', ['續約', '不續約', '待詢問'], l.renew)) + fld('聯繫內容（選填）', '<textarea name="text" placeholder="例：房客表示會續約，下週簽"></textarea>'), {
+      sub: '租約迄日 ' + roc(l.end) + '。登錄「續約」或「不續約」後，首頁到期提醒即移除', submit: '儲存', onSubmit: function (f) {
+        l.renew = f.renew; S.contacts.push({ id: uid('k'), leaseId: l.id, date: TODAY, kind: '續約詢問', text: '意向：' + f.renew + (f.text ? '。' + f.text.trim() : '') }); return '已登錄續約意向：' + f.renew + (f.renew === '續約' ? '；請至單戶頁執行「建立續約合約」' : '');
+      } });
+  } else if (act === 'renew-lease') {
+    var ns = addDays(l.end, 1);
+    modal('建立續約合約｜' + uName(l.unitId), fld('承租人', inp('tenant', l.tenant, 'readonly')) + '<div class="row2">' + dateFld('start', '新合約起日', ns) + dateFld('end', '新合約迄日', addDays(addMonths(ns, 12), -1)) + '</div>' + dateFld('signd', '簽約日（承租人簽名日）', TODAY) +
+      '<div class="row2">' + fld('新月租金', inp('rent', l.rent, 'inputmode="numeric"'), '主管口頭同意的金額（D-082）') + fld('每月繳款日', inp('due', l.dueDay, 'inputmode="numeric"')) + '</div>' +
+      '<p class="muted small">原租金 ' + money(l.rent) + '、押金 ' + money(l.deposit) + '。押金直接轉入新約：新租金較高補收差額、較低退還差額（押金維持新租金 2 個月）。續約不重新拍照、抄錶；保證人與簽約要件沿用。</p>', {
+      sub: '舊約迄日 ' + roc(l.end) + '，新約依簽約日建立申報待辦（續約最容易漏申報）', submit: '建立續約', onSubmit: function (f) {
+        var s = needDate(f.start, '新合約起日'); var e = needDate(f.end, '新合約迄日'); if (e <= s) throw '迄日要晚於起日'; if (s <= l.start) throw '新合約起日要晚於舊合約起日'; var sd = needDate(f.signd, '簽約日'); if (sd > TODAY) throw '簽約日不能晚於今天';
+        var rent = needInt(f.rent, '新月租金'); var due = needInt(f.due, '繳款日'); if (due > 28) throw '繳款日請填 1～28';
+        var dep = rent * 2; var gap = dep - l.deposit;
+        var nl = JSON.parse(JSON.stringify(l)); nl.id = uid('l'); nl.start = s; nl.end = e; nl.rent = rent; nl.deposit = dep; nl.dueDay = due; nl.renew = '待詢問'; nl.signDate = sd; nl.active = true; nl.source = '續約'; nl.term = null;
+        l.active = false; l.endReason = '到期續約'; S.leases.push(nl);
+        S.receivables.filter(function (r) { return r.leaseId === l.id && openAmt(r) > 0; }).forEach(function (r) { r.leaseId = nl.id; });
+        if (gap > 0) S.receivables.push({ id: uid('rv'), leaseId: nl.id, item: '押金差額補收', month: s.slice(0, 7), due: s, amount: gap, paid: 0 });
+        S.contacts.push({ id: uid('k'), leaseId: nl.id, date: TODAY, kind: '續約', text: '續約 ' + roc(s) + '–' + roc(e) + '，月租 ' + money(rent) + '；押金 ' + money(l.deposit) + ' 轉入新約' + (gap > 0 ? '，補收差額 ' + money(gap) : gap < 0 ? '，退還差額 ' + money(-gap) : '') });
+        addFilings(nl);
+        return (sd > s ? '注意：簽約日晚於起租日，主管機關必查；' : '') + '已建立續約合約' + (gap > 0 ? '，押金差額 ' + money(gap) + ' 列入應收' : gap < 0 ? '，要退還押金差額 ' + money(-gap) : '') + '；申報待辦 2 筆';
+      } });
+  } else if (act === 'ready') {
+    modal('回報可招租｜' + uName(u.id), dateFld('date', '租屋網上架日', TODAY) + '<p class="muted small">以上架日為「可招租日」（Q-017），單元會轉為招租中。</p>', { submit: '回報', onSubmit: function (f) { var d = needDate(f.date, '上架日'); u.status = '招租中'; u.statusSince = d; return uName(u.id) + ' 已轉為招租中'; } });
+  } else if (act === 'special') {
+    modal('轉特殊狀況｜' + uName(u.id), fld('說明（必填）', '<textarea name="note" placeholder="例：屋況問題暫停招租、留作公司自用、訴訟中"></textarea>', '特殊狀況一定要寫原因（specs/02 §5.1）'), { submit: '確定', onSubmit: function (f) { var n = needText(f.note, '說明'); u.status = '特殊狀況'; u.statusSince = TODAY; u.note = n; return '已轉為特殊狀況'; } });
+  } else if (act === 'restore') {
+    u.status = ds.to; u.statusSince = TODAY; u.note = ''; save(); render(); toast('已轉為' + ds.to);
+  } else if (act === 'reserve') {
+    modal('收訂｜' + uName(u.id), fld('付訂人稱呼', inp('payer', '', 'placeholder="例：王小姐"')) + fld('電話', inp('phone', '', 'inputmode="tel" placeholder="試用版請勿填真實號碼"')) + fld('訂金金額', inp('amt', Math.round(u.listPrice / 2), 'inputmode="numeric"'), '預設半個月招租定價') + '<div class="row2">' + dateFld('date', '收訂日', TODAY) + dateFld('hold', '保留期限', addDays(TODAY, 7)) + '</div>', { submit: '收訂', onSubmit: function (f) {
+      var p = needText(f.payer, '付訂人稱呼'); var ph = needText(f.phone, '電話'); var a = needInt(f.amt, '訂金金額'); var d = needDate(f.date, '收訂日'); var h = needDate(f.hold, '保留期限'); if (h < d) throw '保留期限不能早於收訂日';
+      S.reservations.push({ id: uid('r'), unitId: u.id, payer: p, phone: ph, amount: a, date: d, holdUntil: h, status: '保留中' }); return '已收訂，保留至 ' + roc(h) + '（到期次日起會提醒）';
+    } });
+  } else if (act === 'sign') {
+    var res = ds.r ? first(S.reservations, function (r) { return r.id === ds.r; }) : null; var start = addDays(TODAY, 1);
+    modal('簽約｜' + uName(u.id), '<div class="row2">' + fld('承租人稱呼', inp('tenant', res ? res.payer : '')) + fld('國籍別', sel('nat', ['本國', '外國'])) + '</div>' + fld('電話', inp('phone', res ? res.phone : '', 'inputmode="tel" placeholder="試用版請勿填真實號碼"')) + '<div class="row2">' + dateFld('start', '合約起日', start) + dateFld('end', '合約迄日', addDays(addMonths(start, 12), -1)) + '</div>' + dateFld('signd', '簽約日（承租人簽名日）', TODAY) +
+      '<div class="row2">' + fld('月租金', inp('rent', u.listPrice, 'inputmode="numeric"')) + fld('每月繳款日', inp('due', 1, 'inputmode="numeric"')) + '</div>' +
+      '<div class="row2">' + fld('連帶保證人（選填）', inp('gname', '', 'placeholder="稱呼"')) + fld('保證人電話', inp('gphone', '', 'inputmode="tel"')) + '</div>' +
+      '<label class="fld inline"><input type="checkbox" name="deco"><span>沒有連帶保證人，另收 2 個月裝潢保證金</span></label><label class="fld inline"><input type="checkbox" name="res"><span>承租人會在本址設籍（退租時須確認遷出才能退押金）</span></label>' +
+      (H(u.houseId).mgmt ? fld('管理費（' + money(H(u.houseId).mgmt) + '／月）', sel('mgmtMode', ['另計', '含租金']), '另計＝房客另繳、另立應收；含租金＝不另收，由公司代繳（specs/05 §4.1）') : '') +
+      (u.caseId === 'c3' ? '<div class="row2">' + fld('實際入住人數', sel('occ', ['1', '2'])) + '<span></span></div>' : ''), {
+      sub: (res ? '訂金 ' + money(res.amount) + ' 會轉入首期款項。' : '') + '簽約後依簽約日建立 2 筆申報待辦（期限＝簽約日＋30 天）；缺少的簽約要件可於簽約後補登', submit: '完成簽約', onSubmit: function (f) {
+        var t = needText(f.tenant, '承租人稱呼'); var ph = needText(f.phone, '電話'); var s = needDate(f.start, '合約起日'); var e = needDate(f.end, '合約迄日'); if (e <= s) throw '合約迄日要晚於起日'; var sd = needDate(f.signd, '簽約日'); if (sd > TODAY) throw '簽約日不能晚於今天';
+        var rent = needInt(f.rent, '月租金'); var due = needInt(f.due, '繳款日'); if (due > 28) throw '繳款日請填 1～28';
+        var hasG = String(f.gname || '').trim();
+        if (!hasG && !f.deco) throw '沒有連帶保證人時，一定要收 2 個月裝潢保證金（R-007）';
+        if (hasG && f.deco) throw '有連帶保證人就不用收裝潢保證金，請擇一';
+        var nl = { id: uid('l'), unitId: u.id, tenant: t, phone: ph, start: s, end: e, rent: rent, deposit: rent * 2, deco: f.deco ? rent * 2 : 0, dueDay: due, renew: '待詢問', residency: !!f.res, signDate: sd, active: true, source: '新租', nat: f.nat, lateFee: true, occupants: u.caseId === 'c3' ? +f.occ : null, mgmt: H(u.houseId).mgmt || 0, mgmtMode: H(u.houseId).mgmt ? f.mgmtMode : '', parking: null, last5s: [], guarantor: hasG ? { name: hasG, phone: String(f.gphone || '').trim() } : null, docs: { addr: false, life: false, idT: false, idG: false, scan: false, efile: false, notary: false, photoIn: false } };
+        S.leases.push(nl); u.status = '已出租'; u.statusSince = s;
+        var credit = 0; if (res) { res.status = '已轉簽約'; credit = res.amount; }
+        [['租約押金', nl.deposit]].concat(nl.deco ? [['裝潢保證金', nl.deco]] : [], [['租金', rent]], nl.mgmtMode === '另計' ? [['管理費', nl.mgmt]] : []).forEach(function (x) { var pd = Math.min(credit, x[1]); credit -= pd; S.receivables.push({ id: uid('rv'), leaseId: nl.id, item: x[0], month: s.slice(0, 7), due: s, amount: x[1], paid: pd }); });
+        if (S.util.rooms && u.caseId === 'c3') S.util.rooms[nl.id] = { prev: 0, now: 0 };
+        addFilings(nl);
+        return (sd > s ? '注意：簽約日晚於起租日，主管機關必查；' : '') + '已簽約，建立 2 筆申報待辦（期限 ' + roc(addDays(sd, 30)) + '）；簽約要件尚缺 ' + missingDocs(nl).length + ' 項，可於單戶頁補登';
+      } });
+  } else if (act === 'forfeit' || act === 'res-return') {
+    var rr = first(S.reservations, function (r) { return r.id === ds.r; });
+    modal(act === 'forfeit' ? '訂金沒收' : '訂金退還', '<p>' + uName(rr.unitId) + '｜付訂人 ' + esc(rr.payer) + '｜' + money(rr.amount) + '</p><p class="muted small" style="margin-top:8px">' + (act === 'forfeit' ? '逾期未簽約視同取消租屋，訂金轉為沒收收入（D-044）。此操作無法復原。' : '因公司因素不出租時退還訂金。') + '</p>', { submit: act === 'forfeit' ? '確定沒收' : '確定退還', onSubmit: function () { rr.status = act === 'forfeit' ? '已沒收' : '已退還'; return '訂金' + rr.status + '，單元維持招租中'; } });
+  } else if (act === 'moveout') {
+    var o1 = sum(leaseRecs(l.id).filter(function (r) { return r.item === '租金'; }), function (r) { return Math.max(0, openAmt(r)); });
+    var o2 = sum(leaseRecs(l.id).filter(function (r) { return r.item === '管理費'; }), function (r) { return Math.max(0, openAmt(r)); });
+    var cats = ['清潔費', '設備賠償', '提前解約違約金', '行政手續費', '逾期未遷離（相當月租金×2）', '其他'];
+    modal('退租點交｜' + uName(l.unitId), dateFld('date', '點交日', l.term ? l.term.date : TODAY) +
+      '<div class="row2">' + fld('2. 應退預繳租金', inp('r1', 0, 'inputmode="numeric"')) + fld('3. 應退預繳管理費', inp('r2', 0, 'inputmode="numeric"')) + '</div>' +
+      '<div class="row2">' + fld('4. 應扣租金', inp('d1', o1, 'inputmode="numeric"'), '預設＝未沖的租金') + fld('5. 應扣管理費', inp('d2', o2, 'inputmode="numeric"')) + '</div>' +
+      '<div class="row2">' + fld('6. 應扣水費', inp('uw', '', 'inputmode="numeric" placeholder="空白＝待結清"')) + fld('7. 應扣電費', inp('ue', '', 'inputmode="numeric" placeholder="空白＝待結清"')) + '</div><div class="row2">' + fld('8. 應扣瓦斯費', inp('ug', '', 'inputmode="numeric" placeholder="空白＝待結清"')) + '<span></span></div>' +
+      '<div class="row2">' + fld('9. 應扣他項', sel('c1', cats, l.term && l.term.fee ? (l.term.feeItem || '提前解約違約金') : '清潔費')) + fld('金額', inp('a1', l.term && l.term.fee ? 0 : 1500, 'inputmode="numeric"'), l.term && l.term.fee ? '違約金已列應收，這裡不重複' : '') + '</div>' +
+      '<div class="row2">' + fld('10. 應扣他項', sel('c2', cats, '設備賠償')) + fld('金額', inp('a2', '', 'inputmode="numeric"'), '設備賠償金額由協商決定，可查<a href="#/ref/depr">折舊參考表</a>') + '</div>' +
+      '<label class="fld inline"><input type="checkbox" name="res"' + (l.residency ? ' checked' : '') + '><span>承租人在本址設籍</span></label>', { sub: '承租人 ' + esc(l.tenant) + '｜押金 ' + money(l.deposit) + (l.deco ? '＋裝潢保證金 ' + money(l.deco) + '（分列）' : '') + '。初稿的水電瓦斯可以先「待結清」（D-050）；點交後單元回到「整備中」', submit: '建立結算初稿', onSubmit: function (f) {
+        var d = needDate(f.date, '點交日'); var refundI = [], ded = [];
+        var r1 = needInt(f.r1 || 0, '應退預繳租金', true), r2 = needInt(f.r2 || 0, '應退預繳管理費', true);
+        if (r1) refundI.push({ item: '應退預繳租金', amount: r1 }); if (r2) refundI.push({ item: '應退預繳管理費', amount: r2 });
+        var d1 = needInt(f.d1 || 0, '應扣租金', true), d2 = needInt(f.d2 || 0, '應扣管理費', true);
+        if (d1) ded.push({ item: '租金', amount: d1 }); if (d2) ded.push({ item: '管理費', amount: d2 });
+        [[f.c1, f.a1], [f.c2, f.a2]].forEach(function (x) { if (String(x[1] || '').trim()) { var n = needInt(x[1], '應扣他項金額', true); if (n) ded.push({ item: x[0], amount: n }); } });
+        l.active = false; l.residency = !!f.res; u.status = '整備中'; u.statusSince = d;
+        S.settlements.push({ id: uid('s'), leaseId: l.id, unitId: u.id, moveOutDate: d, refundItems: refundI, deductItems: ded, utils: { water: optInt(f.uw, '水費'), elec: optInt(f.ue, '電費'), gas: optInt(f.ug, '瓦斯費') }, draftOk: null, signedDate: null, passbookDate: null, residency: !!f.res, movedOutDate: null, nameMatch: true, checks: { meter: false, settle: false, rename: false, keys: false }, refundedDate: null });
+        return '已建立退租結算初稿，單元轉為整備中';
+      } });
+  } else if (act === 'notice-make') {
+    var a = arrearsOf(l); var no = '115-存-' + String(S.noticeNo).padStart(3, '0');
+    modal('製作存證信函｜' + uName(l.unitId), '<div class="kv"><span>文號</span><span class="num">' + no + '（全公司年度流水）</span></div><div class="kv"><span>種類</span><span>第 ' + a.stage + ' 封｜' + noticeKind(a.stage) + '</span></div><div class="kv"><span>逾期</span><span class="num">' + a.months + ' 期、' + money(a.amount) + '（' + itemBreak(a.od) + '）</span></div><p class="muted small" style="margin-top:8px">製作後要等主管確認才能寄出（D-061）。試用版不產生信函檔。</p>', {
+      submit: '製作', onSubmit: function () { S.noticeNo++; S.notices.push({ id: uid('n'), leaseId: l.id, no: no, kind: noticeKind(a.stage), created: TODAY, status: '待確認' }); return '已製作 ' + no + '，等主管確認'; } });
+  } else if (act === 'breach') {
+    var bno = '115-違-' + String(S.breachNo).padStart(3, '0');
+    modal('違約提醒通知單｜' + uName(l.unitId), fld('違約事實', '<textarea name="fact" placeholder="例：於房內飼養寵物，違反約定"></textarea>') + '<div class="row2">' + fld('違約條款', inp('clause', '第十條')) + fld('改善期間（天）', inp('days', 7, 'inputmode="numeric"')) + '</div>' +
+      '<p class="muted small">欠租以外的違約用這張，不發存證信函（specs/03 §7.1）。文號 ' + bno + '；改善截止日＝送達日＋改善天數；製作後要主管確認（D-061）。</p>', { submit: '製作', onSubmit: function (f) {
+        var fact = needText(f.fact, '違約事實'); needText(f.clause, '違約條款'); var dd = needInt(f.days, '改善期間');
+        S.breachNo++; S.notices.push({ id: uid('n'), leaseId: l.id, no: bno, kind: '違約提醒通知單', created: TODAY, status: '待確認', fact: fact + '｜' + f.clause + '｜' + dd + ' 天內改善' }); return '已製作 ' + bno + '，等主管確認';
+      } });
+  } else if (act === 'early-term') {
+    var TY = ['房客私人因素（無違約版，照收 1 個月違約金）', '原房客自行找到接手者等（無違約版，改收行政手續費）', '公司主動終止—房客違約（有違約版）'];
+    modal('提前終止租約｜' + uName(l.unitId), fld('情形', sel('type', TY)) + dateFld('date', '終止日', addDays(TODAY, 30)) + fld('違約金或行政手續費', inp('fee', l.rent, 'inputmode="numeric"'), '房客私人因素＝1 個月租金（D-069）；接手等三種情形改收行政手續費，金額請填；公司主動終止依協議書') +
+      '<p class="muted small">一般提前終止應至少 1 個月前通知；違約金得由租約押金抵充（合約第十一條）。協議書（RP-08）試用版不產生。</p>', { submit: '建立', onSubmit: function (f) {
+        var d = needDate(f.date, '終止日'); if (d <= TODAY) throw '終止日要在今天之後'; var fee = needInt(f.fee, '金額', true);
+        var item = f.type.indexOf('行政手續費') >= 0 ? '行政手續費' : '提前解約違約金';
+        l.term = { type: f.type.split('（')[0], date: d, fee: fee, feeItem: item };
+        if (fee) S.receivables.push({ id: uid('rv'), leaseId: l.id, item: item, month: d.slice(0, 7), due: d, amount: fee, paid: 0 });
+        S.contacts.push({ id: uid('k'), leaseId: l.id, date: TODAY, kind: '提前解約預告', text: f.type + '，終止日 ' + roc(d) + (fee ? '，' + item + ' ' + money(fee) : '') });
+        return '已約定 ' + roc(d) + ' 提前終止' + (fee ? '，' + item + ' 列入應收' : '') + '；終止日當天做退租點交';
+      } });
+  } else if (act === 'occupancy') {
+    modal('入住人數異動｜' + uName(l.unitId), fld('實際入住人數', sel('occ', ['1', '2'], String(l.occupants || 1))) + dateFld('date', '生效日', TODAY) + '<p class="muted small">實住兩人：租金 +2,000 元／月（試用值）、公共水費按 2 人計；租約期間新增住戶要重新簽約（specs/05 §1.0.1）。合約人數與實際居住人數是兩個欄位。</p>', { submit: '儲存', onSubmit: function (f) { needDate(f.date, '生效日'); var n = +f.occ; if (n === (l.occupants || 1)) throw '人數沒有變動'; l.occupants = n; S.contacts.push({ id: uid('k'), leaseId: l.id, date: TODAY, kind: '其他', text: '實際入住人數改為 ' + n + ' 人' }); return '已登錄入住人數 ' + n + ' 人，下次水電分攤會用新人數' + (n === 2 ? '；須重新簽約並調整租金' : ''); } });
+  } else if (act === 'visitor') {
+    modal('訪客過夜｜' + uName(l.unitId), '<div class="row2">' + dateFld('date', '日期', TODAY) + fld('晚數', inp('n', 1, 'inputmode="numeric"')) + '</div><p class="muted small">250 元／晚（試用值），訪客不分擔公共水電（specs/05 §1.0.1）。</p>', { submit: '登錄', onSubmit: function (f) { var d = needDate(f.date, '日期'); var n = needInt(f.n, '晚數'); S.receivables.push({ id: uid('rv'), leaseId: l.id, item: '訪客過夜費', month: d.slice(0, 7), due: addDays(d, 7), amount: 250 * n, paid: 0 }); return '已產生訪客過夜費 ' + money(250 * n); } });
+  } else if (act === 'stub') {
+    toast('「' + esc(ds.stub) + '」試用版未提供；正式版於此產生文件或開啟表單');
+  }
+}
+function runSubmit(msg) { closeModal(); save(); render(); if (msg) toast(msg); }
+
+document.addEventListener('submit', function (e) {
+  if (e.target.id !== 'mform') return; e.preventDefault(); if (!modalSubmit) return;
+  var fd = new FormData(e.target); var f = {}; fd.forEach(function (v, k) { f[k] = v; });
+  try { var msg = modalSubmit(f); runSubmit(msg); } catch (err) { $('#merr').textContent = typeof err === 'string' ? err : '發生錯誤：' + err.message; }
+});
+function byId(list, id) { return first(list, function (x) { return x.id === id; }); }
+document.addEventListener('click', function (e) {
+  var t = e.target.closest('[data-act]');
+  if (!t) {
+    var go = e.target.closest('tr[data-go]'); if (go && !e.target.closest('a,button,input')) { location.hash = go.getAttribute('data-go'); return; }
+    if (!e.target.closest('.sbox')) { var sd = $('#sdrop'); if (sd) sd.hidden = true; }
+    return;
+  }
+  if (t.disabled) return;
+  var act = t.getAttribute('data-act'); var ds = t.dataset;
+  if (act === 'close-modal') { closeModal(); return; }
+  if (act === 'reset') { modal('重設試用資料', '<p>將試用資料重設為初始狀態，本裝置的操作紀錄將全部清除。</p>', { submit: '重設', onSubmit: function () { S = seed(); if (location.hash && location.hash !== '#/') location.hash = '#/'; return '已重設試用資料'; } }); return; }
+  if (act === 'quick') { openPick(ds.k); return; }
+  if (act === 'quick-sheet') { modal('快速登錄', '<div class="bigbtns"><button type="button" data-act="quick" data-k="pay">' + ic('coin', 26) + '登錄收款</button><button type="button" data-act="quick" data-k="repair">' + ic('wrench', 26) + '報修</button><button type="button" data-act="quick" data-k="status">' + ic('status', 26) + '狀態回報</button><button type="button" data-act="quick" data-k="contact">' + ic('chat', 26) + '聯繫紀錄</button></div>'); return; }
+  if (act === 'reveal') { var el = $('#idno'); if (el) el.textContent = '（試用版不顯示完整證號；正式版此時才讀取證號資料）'; t.remove(); return; }
+  if (act === 'house') { houseModal(H(ds.id)); return; }
+  if (act === 'payable-paid') { var p = byId(S.payables, ds.id); modal('登錄已付款', '<p>' + esc(p.payee) + '｜' + esc(p.period) + '｜' + money(p.amount) + '</p>' + dateFld('date', '付款日', TODAY), { submit: '登錄', onSubmit: function (f) { p.paidDate = needDate(f.date, '付款日'); return '已登錄付款'; } }); return; }
+  if (act === 'maint-done') {
+    var m = byId(S.maint, ds.id); var hasL = !!activeLease(m.unitId);
+    modal('登錄完工｜' + uName(m.unitId), '<p>' + esc(m.item) + '（報修日 ' + roc(m.reportDate) + '）</p>' + dateFld('date', '完工日', TODAY) + '<div class="row2">' + fld('維修成本', inp('cost', '', 'inputmode="numeric"'), '公司實際支出') + fld('正航單號（選填）', inp('erp', '')) + '</div>' +
+      fld('責任歸屬（由維修廠商判定）', sel('resp', ['非人為（公司負擔）', '人為（向房客收費）', '附屬設備現況點交（不求償）'])) + fld('向房客收費', inp('charge', 0, 'inputmode="numeric"'), '人為損壞才收；家具家電可查折舊參考表協商'), { submit: '登錄完工', onSubmit: function (f) {
+        var d = needDate(f.date, '完工日'); if (d < m.reportDate) throw '完工日不能早於報修日'; var cost = needInt(f.cost, '維修成本', true); var ch = needInt(f.charge || 0, '向房客收費', true);
+        if (f.resp.indexOf('人為（') === 0 && !ch) throw '人為損壞要填向房客收費的金額';
+        if (f.resp.indexOf('人為（') !== 0 && ch) throw '非人為損壞不向房客收費，收費請填 0';
+        if (ch && !hasL) throw '本戶目前無租約，無法向房客收費';
+        m.doneDate = d; m.cost = cost; m.charge = ch; m.resp = f.resp; m.erp = f.erp || '';
+        if (ch) S.receivables.push({ id: uid('rv'), leaseId: activeLease(m.unitId).id, item: '維修收費', month: d.slice(0, 7), due: addDays(d, 7), amount: ch, paid: 0 });
+        return '已結案' + (ch ? '，維修收費 ' + money(ch) + ' 列入應收' : '') + '；公司實際負擔 ' + money(cost - ch);
+      } }); return;
+  }
+  if (act === 'filing-done') { var fdo = byId(S.filings, ds.id); modal('標記已辦｜' + fdo.type, '<p>' + uName(fdo.unitId) + '｜簽約日 ' + roc(fdo.signDate) + '</p>' + dateFld('date', '辦理日', TODAY) + fld('回執編號（選填）', inp('receipt', '')), { submit: '標記已辦', onSubmit: function (f) { fdo.doneDate = needDate(f.date, '辦理日'); fdo.receipt = f.receipt || ''; fdo.status = '已辦'; return '已標記已辦'; } }); return; }
+  if (act === 'filing-skip') { var fsk = byId(S.filings, ds.id); modal('決定不申報｜' + fsk.type, '<p>' + uName(fsk.unitId) + '</p>' + fld('理由（必填）', '<textarea name="reason" placeholder="例：屬豁免情形（說明依據）"></textarea>', '不需主管核准，但理由必填（D-066）'), { submit: '確定', onSubmit: function (f) { fsk.reason = needText(f.reason, '理由'); fsk.status = '不申報'; return '已記錄不申報與理由'; } }); return; }
+  if (act === 'notice-ok') { if (!isAdmin()) { toast('限管理者確認發文'); return; } var n = byId(S.notices, ds.id); n.status = '已確認'; save(); render(); toast(n.no + ' 已確認，可寄出' + (n.kind.indexOf('存證信函') === 0 ? '；如需登記郵資，請至單戶頁執行「登錄費用」（選填）' : '')); return; }
+  if (act === 'doc-ok') { var ld = L(ds.l); ld.docs[ds.k] = true; save(); render(); toast('已登錄齊備' + (missingDocs(ld).length ? '，尚缺 ' + missingDocs(ld).length + ' 項' : '，簽約要件全部齊備')); return; }
+  if (act === 'late-bill') { var r = byId(S.receivables, ds.id); var lr = L(r.leaseId); var c2 = lateCalc(r, lr); var nx = addMonths(r.due, 1); if (nx <= TODAY) nx = TODAY.slice(0, 8) + String(lr.dueDay).padStart(2, '0'); if (nx <= TODAY) nx = addMonths(nx, 1);
+    modal('產生滯納金應收｜' + uName(lr.unitId), '<div class="kv"><span>欠款月份</span><span>' + rocM(r.month) + '</span></div><div class="kv"><span>遲繳天數（至今天）</span><span>' + c2.days + ' 天</span></div><div class="kv"><span>違約金</span><span class="num">' + money(c2.fee) + '</span></div><p class="muted small" style="margin-top:8px">隨次月租金一同收取（' + roc(nx) + '）；拒繳由租約押金扣除。</p>', { submit: '產生', onSubmit: function () { r.lateBilled = true; S.receivables.push({ id: uid('rv'), leaseId: lr.id, item: '滯納金', month: nx.slice(0, 7), due: nx, amount: c2.fee, paid: 0 }); return '已產生滯納金 ' + money(c2.fee) + '，隨次月租金收取'; } }); return; }
+  if (act === 'util-hist') { var hx = (S.utilHist || []).filter(function (x) { return x.period === ds.p; })[0]; if (!hx) return;
+    modal('分攤明細｜青田街 ' + rocM(hx.period), '<div class="grid2" style="gap:2px 24px;margin-bottom:10px">' + kvRow('水費帳單', money(hx.billAmt) + '（' + num(hx.billDeg) + ' 度）') + kvRow('單價', hx.price.toFixed(2) + ' 元／度') + kvRow('私表度數', num(hx.priv) + ' 度') + kvRow('公司應付／其他使用者', money(hx.company) + '／' + money(hx.third)) + kvRow('分攤人數（當期）', hx.occ + ' 人') + kvRow('公電帳單', money(hx.commonElec) + '（' + hx.roomsN + ' 間均分）') + kvRow('電價', hx.elecPrice + ' 元／度') + kvRow('產生應收日', roc(hx.genDate)) + '</div>' +
+      '<div class="tblwrap"><table class="tbl"><thead><tr><th>房間</th><th>承租人</th><th class="r">人數</th><th class="r">公共水費</th><th class="r">電表</th><th class="r">電費</th><th class="r">公電</th><th class="r">合計</th></tr></thead><tbody>' +
+      hx.rows.map(function (x) { return '<tr><td>' + esc(x.code) + '</td><td>' + esc(x.tenant) + '</td><td class="r num">' + x.occ + '</td><td class="r num">' + num(x.w) + '</td><td class="r num">' + x.prev + ' → ' + x.now + '</td><td class="r num">' + num(x.e) + '</td><td class="r num">' + num(x.ce) + '</td><td class="r num"><b>' + num(x.total) + '</b></td></tr>'; }).join('') + '</tbody></table></div><p class="muted small" style="margin-top:8px">人數、讀數為當期快照；之後補登入住人數不改本期（D-107）。</p>', { sub: '合計向房客請款 ' + money(hx.total) + '（' + hx.rows.length + ' 間）' }); return; }
+  if (act === 'util-gen') { S.utilHist = S.utilHist || []; S.utilHist.push(utilSnap(S.util, utilLeases(), function (l) { return U(l.unitId).code; }, '2026-09', TODAY)); var k = utilCalc(); k.rows.forEach(function (x) { if (x.total) S.receivables.push({ id: uid('rv'), leaseId: x.l.id, item: '水電費', month: '2026-09', due: addDays(TODAY, 5), amount: x.total, paid: 0 }); }); S.utilDone = true; var t4 = byId(S.tasks, 't4'); t4.done = true; t4.doneMeta = '10/05 完成'; save(); render(); toast('已產生 ' + k.rows.length + ' 筆水電費應收，例行作業已打勾（請款明細 RP-04 試用版不產生檔案）'); return; }
+  if (act === 'cal-sync') {
+    if (S.calPending.length || byId(S.tasks, 't2').done) { toast('9 月日曆已同步過'); return; }
+    modal('同步公司日曆（9 月）', '<p>正式版會跳出 Google 授權，讀取公司共用日曆 9 月的行程：三段碼（如 A-9-8）與唯一的兩段碼自動歸戶；無法辨識者列出由人工指定。只記單元、事件類型、日期，<b>不保存原始標題</b>（D-074）。</p>', { submit: '開始同步', onSubmit: function () {
+      S.calPending = [{ id: 'ce1', date: '2026-09-12', type: '帶看', hint: '「青田帶看」沒寫房號', why: '案場有 12 間，無法自動判斷' }, { id: 'ce2', date: '2026-09-19', type: '簽約點交', hint: '「5F 簽約點交」沒寫案場', why: '松園、港墘都有 5 樓寫法' }, { id: 'ce3', date: '2026-09-26', type: '帶看', hint: '「9-3 看房」查無此戶', why: '戶別清單沒有 9-3，可能寫錯' }];
+      var t2 = byId(S.tasks, 't2'); t2.done = true; t2.doneMeta = '10/05 完成'; S.calEvents.push({ unitId: S.units[0].id, type: '帶看', date: '2026-09-05' });
+      return '已同步 9 月日曆：自動歸戶 41 筆（帶看 7 筆），3 筆無法辨識，已列於首頁「日曆待指定」';
+    } }); return;
+  }
+  if (act === 'cal-assign') { openPick('cal:' + ds.id, '指定單元：' + byId(S.calPending, ds.id).hint, '選取單元後，此行程計入該單元次數'); return; }
+  if (act === 'cal-ignore') { S.calPending = S.calPending.filter(function (x) { return x.id !== ds.id; }); save(); render(); toast('已標為不歸戶（例如公司活動、採購）'); return; }
+  if (act === 'cal-do') { var ce = byId(S.calPending, ds.id); S.calEvents.push({ unitId: ds.u, type: ce.type, date: ce.date }); S.calPending = S.calPending.filter(function (x) { return x.id !== ds.id; }); closeModal(); save(); render(); toast('已指定為 ' + uName(ds.u) + '（' + ce.type + '）'); return; }
+  if (act === 'sus-assign') { openPick('sus:' + ds.id, '辨識暫掛款：' + money(byId(S.suspense, ds.id).amount), '選取付款單元，款項沖銷至該戶最早的應收，並記錄末五碼'); return; }
+  if (act === 'sus-do') {
+    var x = byId(S.suspense, ds.id); var la = activeLease(ds.u); var hits = lateHits(la, x.amount, x.date);
+    var doSus = function (dec) { var al = allocate(la, x.amount); var lm = lateApply(la, hits, dec); x.status = '已沖銷'; x.to = uName(ds.u); if (la.last5s.indexOf(x.last5) < 0) la.last5s.push(x.last5); S.payments.push({ id: uid('pay'), leaseId: la.id, date: x.date, amount: x.amount, last5: x.last5 });
+      return '已沖銷至 ' + uName(ds.u) + '，沖 ' + al.n + ' 筆應收' + (al.left > 0 ? '，溢收 ' + money(al.left) : '') + '；末五碼 ' + x.last5 + ' 已記錄' + lm; };
+    if (hits.length) { modal('沖銷前確認違約金｜' + uName(ds.u), '<p>暫掛款 ' + money(x.amount) + '（入帳日 ' + roc(x.date) + '）沖銷後，下列逾期租金會結清：</p>' + lateChoiceHtml(la, hits), { submit: '確認沖銷', onSubmit: function (f) { return doSus(lateDecide(hits, f)); } }); return; }
+    var msg = doSus(null); closeModal(); save(); render(); toast(msg); return;
+  }
+  if (act === 'co-edit') { if (!isAdmin()) { toast('限管理者修改公司主檔'); return; } coEdit(ds.k); return; }
+  if (act === 'task-done') { var tk = byId(S.tasks, ds.id); tk.done = true; tk.doneMeta = '10/05 完成'; save(); location.hash = '#/'; toast('例行作業已打勾'); return; }
+  if (act === 'grp-pick') { S.curGroup = ds.id || null; save(); render(); return; }
+  if (act === 'grp-del') { var gd = byId(S.groups, ds.id); S.groups = S.groups.filter(function (x) { return x.id !== ds.id; }); if (S.curGroup === ds.id) S.curGroup = null; closeModal(); save(); render(); toast('已刪除群組「' + gd.name + '」（案件與帳務不受影響）'); return; }
+  if (act === 'grp-edit') { var gx = ds.id ? byId(S.groups, ds.id) : null;
+    modal(gx ? '編輯群組' : '新增群組', fld('群組名稱', inp('gname', gx ? gx.name : '', 'placeholder="例如：河濱新城全部"')) + '<div class="muted small" style="margin:10px 0 4px">選取要一起看的案件（至少 2 個；一個案件可同時在多個群組）</div>' +
+      S.cases.map(function (c) { return '<label class="fld inline"><input type="checkbox" name="gc_' + c.id + '"' + (gx && gx.caseIds.indexOf(c.id) >= 0 ? ' checked' : '') + '><span>' + c.name + '<small class="muted">　' + kLabel(c.id) + '</small></span></label>'; }).join('') +
+      (gx ? '<p style="margin-top:10px"><button type="button" class="btn sm ghost" data-act="grp-del" data-id="' + gx.id + '">刪除此群組</button></p>' : ''),
+      { sub: '群組全公司共用、任何人可建可改；只影響檢視，不影響帳務（D-111）', submit: '儲存', onSubmit: function (f) {
+        var name = (f.gname || '').trim(); if (!name) throw '請填群組名稱';
+        if (S.groups.some(function (x) { return x.name === name && (!gx || x.id !== gx.id); })) throw '已有同名的群組';
+        var ids = S.cases.filter(function (c) { return f['gc_' + c.id]; }).map(function (c) { return c.id; }); if (ids.length < 2) throw '群組至少要選 2 個案件';
+        if (gx) { gx.name = name; gx.caseIds = ids; } else { var nid = uid('g'); S.groups.push({ id: nid, name: name, caseIds: ids }); S.curGroup = nid; }
+        return '已儲存群組「' + name + '」（' + ids.length + ' 個案件）'; } }); return; }
+  if (act === 'newcase') {
+    modal('新增案件（引導式檢核）', '<p class="muted small" style="margin:0 0 8px">新增案件＝登錄一份新簽的上層合約。擴充的補充合約加在原案件，不另開；租賃移轉另開新案件（D-109）。</p><ol style="padding-left:20px;line-height:1.9;margin:0"><li>上層合約：案件名稱／代號、取得方式、出租方、承辦人、合約起訖、免租期、租金分段、付款週期與方式、押金／履約保證金、選擇權、通報義務</li><li>案件設定：成本分攤口徑、空間裝修攤提、合約範本、滯納金條款預設</li><li>匯入房屋與出租單元（地址、建號、坪數、土地標的、日曆別名），並指定所在案場；新的案場另到「案場設定」建立公共表計與費用負擔預設（D-110）</li><li>需要和其他案件一起看時，加入群組（D-111）</li><li>可以沿用既有案件的設定當範本，再逐項確認</li><li>啟用前檢核：必填項齊全才能啟用</li></ol><p class="muted small" style="margin-top:8px">specs/07 §3、§6。試用版不開放新增。</p>'); return;
+  }
+  if (act === 'st') {
+    var s = byId(S.settlements, ds.s); var fl = ds.f;
+    var lab = { draft: '承租人確認初稿', sign: '完整版簽名', passbook: '存摺影本收件', moved: '戶籍遷出確認' };
+    if (fl === 'refund') { var bl = refundBlockers(s); if (bl.length) { toast('尚無法退款：' + bl[0]); return; } modal('送出退款', '<p>應退 ' + money(stRefundTotal(s)) + ' 給 ' + esc(stLease(s).tenant) + '</p><p class="muted small" style="margin-top:8px">送出後結算鎖定，之後發現錯誤只能開更正版（D-060、B-2）。未沖的應收會以押金扣抵沖銷。</p>', { submit: '確定退款', onSubmit: function () { s.refundedDate = TODAY; leaseRecs(s.leaseId).forEach(function (q) { if (openAmt(q) > 0) q.paid = q.amount; }); return '已退款，結算完成'; } }); return; }
+    if (fl === 'util') { modal('水電瓦斯結清金額', '<div class="row2">' + fld('水費', inp('w', s.utils.water, 'inputmode="numeric"')) + fld('電費', inp('e', s.utils.elec, 'inputmode="numeric"')) + '</div><div class="row2">' + fld('瓦斯費', inp('g', s.utils.gas, 'inputmode="numeric"'), '沒有瓦斯填 0') + '<span></span></div><p class="muted small">外勤拍表 → 內勤結清、登記。退租前的水費結清差額由承租人負擔（specs/03 §6.4）。</p>', { submit: '儲存', onSubmit: function (f) { s.utils = { water: optInt(f.w, '水費'), elec: optInt(f.e, '電費'), gas: optInt(f.g, '瓦斯費') }; return utilPending(s).length ? '已儲存，尚有 ' + utilPending(s).length + ' 項待結清' : '水電瓦斯都已結清，可以做完整版簽名'; } }); return; }
+    if (fl === 'sign' && (!s.draftOk || utilPending(s).length)) { toast(!s.draftOk ? '要先完成「承租人確認初稿」' : '水電瓦斯仍待結清，完整版要有實際金額（D-050）'); return; }
+    modal(lab[fl], dateFld('date', '日期', TODAY) + (fl === 'moved' ? '<p class="muted small">確認方式（戶籍謄本或戶口名簿影本）待定（S-12）</p>' : ''), { submit: '登錄', onSubmit: function (f) { var d = needDate(f.date, '日期'); s[{ draft: 'draftOk', sign: 'signedDate', passbook: 'passbookDate', moved: 'movedOutDate' }[fl]] = d; return '已登錄' + lab[fl]; } });
+    return;
+  }
+  openAction(act, ds);
+});
+document.addEventListener('change', function (e) {
+  var t = e.target; var k = t.getAttribute('data-change'); if (!k) return;
+  if (k === 'role' || k === 'role-radio') { S.role = t.value; save(); render(); toast('已切換為' + (isAdmin() ? '管理者' : '一般人員') + '的畫面'); }
+  if (k === 'task') { var x = byId(S.tasks, t.getAttribute('data-id')); x.done = t.checked; x.doneMeta = t.checked ? roc(TODAY).slice(4) + ' 完成' : ''; save(); render(); }
+  if (k === 'st-name') { byId(S.settlements, t.getAttribute('data-s')).nameMatch = t.checked; save(); render(); }
+  if (k === 'st-check') { byId(S.settlements, t.getAttribute('data-s')).checks[t.getAttribute('data-k')] = t.checked; save(); render(); }
+  if (k === 'rate') { var v = Number(t.value); if (v > 0 && v < 20) { S.rate = v; save(); render(); } else toast('利率請填 0～20 之間的數字'); }
+});
+document.addEventListener('input', function (e) {
+  var t = e.target; if (!t.getAttribute) return;
+  if (t.hasAttribute('data-search')) { renderSearch(t); return; }
+  var uk = t.getAttribute('data-util'); var rm = t.getAttribute('data-util-room');
+  if (uk || rm) { var v = Number(t.value); if (isNaN(v) || v < 0) return; if (uk) { if ((uk === 'billDeg') && v <= 0) return; S.util[uk] = v; } else S.util.rooms[rm][t.getAttribute('data-f')] = v; save(); var box = $('#utilTable'); if (box && uk) box.innerHTML = utilTable(); if (box && rm) { var keep = document.activeElement && document.activeElement.getAttribute('data-util-room') ? [rm, t.getAttribute('data-f')] : null; box.innerHTML = utilTable(); if (keep) { var el = document.querySelector('[data-util-room="' + keep[0] + '"][data-f="' + keep[1] + '"]'); if (el) { el.focus(); var n = el.value.length; el.setSelectionRange && el.setSelectionRange(n, n); } } } }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { if ($('#modal-root').innerHTML) closeModal(); var sd = $('#sdrop'); if (sd) sd.hidden = true; }
+  var sm = e.key === 'Enter' && e.target.getAttribute ? e.target.getAttribute('data-search') : null;
+  if (sm === 'pick') { var a = document.querySelector('#pres a, #pres button'); e.preventDefault(); if (a) a.click(); }
+  else if (sm) { var rs = searchUnits(e.target.value); if (rs.length) { e.preventDefault(); location.hash = '#/unit/' + rs[0].id; } }
+});
+
+/* ================= 主程式 ================= */
+function render() {
+  var p = route(); var page = p[0] || 'home'; var html;
+  switch (page) {
+    case 'home': html = pHome(); break;
+    case 'todo': html = pTodo(p[1]); break;
+    case 'cases': html = pCases(); break;
+    case 'case': html = pCase(p[1], p[2]); break;
+    case 'unit': html = pUnit(p[1]); break;
+    case 'billing': html = pBilling(p[1] || 'open'); break;
+    case 'utility': html = pUtility(); break;
+    case 'maint': html = pMaint(); break;
+    case 'ref': html = pDepr(); break;
+    case 'filings': html = pFilings(p[1]); break;
+    case 'reports': html = pReports(); break;
+    case 'report': html = pReport(p[1]); break;
+    case 'casecfg': html = pCaseCfg(); break;
+    case 'sitecfg': html = pSiteCfg(); break;
+    case 'company': html = pCompany(); break;
+    case 'more': html = pMore(); break;
+    case 'settings': html = pSettings(); break;
+    case 'search': html = pSearch(); break;
+    default: html = pHome();
+  }
+  $('#side').innerHTML = sideNav(page); $('#main').innerHTML = html; $('#tabbar').innerHTML = tabbar(page);
+}
+window.addEventListener('hashchange', function () {
+  closeModal(); render(); window.scrollTo(0, 0);
+  var p = route();
+  if (p[0] === 'unit' && p[2]) {
+    var u = U(p[1]); var l = u ? activeLease(u.id) : null; history.replaceState(null, '', '#/unit/' + p[1]);
+    if (u && (p[2] === 'repair' || p[2] === 'expense' || ((p[2] === 'pay' || p[2] === 'contact') && l))) openAction(p[2], { u: u.id, l: l ? l.id : '' });
+  }
+  if (p[0] === 'search') { var q = $('#mq'); if (q) q.focus(); }
+});
+load(); render();
+</script>
+</body>
+</html>
