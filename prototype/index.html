@@ -894,7 +894,6 @@ function pHome() {
     frow('<span class="muted">對外文件 ' + vis[0] + ' 張｜內部報表 ' + vis[1] + ' 張</span>'),
     frow(t5.done ? '<span class="pill p-ok">產權機關月報已送出</span>' : '<span class="pill p-amber">本月待送</span> 產權機關月報（' + esc(t5.meta) + '）')]);
   return '<header class="hometop"><div class="brand" style="padding:0"><span class="brand-mark">' + ic('home') + '</span><b>包租管理</b></div>' + userBtn() + '</header>' +
-    '<p class="muted" style="margin:-8px 0 18px">' + rocW(TODAY) + '｜' + S.cases.length + ' 個案件、' + S.units.length + ' 間出租單元</p>' +
     '<div class="quick4 only-mob"><button type="button" data-act="quick" data-k="pay">' + ic('coin', 24) + '登錄收款</button><button type="button" data-act="quick" data-k="repair">' + ic('wrench', 24) + '報修</button><button type="button" data-act="quick" data-k="status">' + ic('status', 24) + '狀態回報</button><button type="button" data-act="quick" data-k="contact">' + ic('chat', 24) + '聯繫紀錄</button></div>' +
     '<div class="grid3 fcards">' + cCase + cMaint + cBill + cFile + cTodo + cRep + '</div>';
 }
