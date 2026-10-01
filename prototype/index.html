@@ -148,6 +148,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 .todo-row .age{font-size:14px;color:var(--text2);white-space:nowrap}
 .distbar{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:3px;min-width:160px}
 .distbar span{display:block}
+.histbox>summary{list-style:none}.histbox>summary::-webkit-details-marker{display:none}.histbox>summary svg{color:var(--text3);transition:transform .15s}.histbox[open]>summary svg{transform:rotate(90deg)}
 
 /* 按鈕 */
 .btn{height:44px;padding:0 18px;border-radius:10px;border:1px solid transparent;cursor:pointer;font-size:15px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;white-space:nowrap}
@@ -331,7 +332,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 'use strict';
 /* ================= 基本工具 ================= */
 var TODAY = '2026-10-05';
-var KEY = 'prm-prototype-v11';
+var KEY = 'prm-prototype-v12';
 var S = null;
 var $ = function (sel) { return document.querySelector(sel); };
 
@@ -496,6 +497,15 @@ function seed() {
   var q2 = U('c3', '2號房'), g5 = U('c5', '5F-A');
   var lq2 = mkLease(q2, { start: '2025-10-01', end: '2026-09-30', tenant: '蘇小姐', rent: 10000, residency: false, active: false, keepStatus: true, deco: 0 });
   var lg5 = mkLease(g5, { start: '2025-10-01', end: '2026-09-30', tenant: '張小姐', rent: 13000, residency: true, active: false, keepStatus: true, deco: 0 });
+  lq2.endReason = '到期不續約'; lg5.endReason = '到期不續約';
+  /* 歷史租約示範（已結束、只供調閱；D-141） */
+  function pastLease(c, code, o) {
+    st.leases.push({ id: 'lh' + (++ln), unitId: U(c, code).id, tenant: o.tenant, phone: '09xx-xxx-' + o.ph, start: o.start, end: o.end, rent: o.rent, deposit: o.rent * 2, deco: 0, dueDay: 1, renew: '', residency: false, signDate: addDays(o.start, -7), active: false, source: o.source || '新租', endReason: o.endReason, moveOut: o.moveOut || o.end, nat: '本國', lateFee: false, occupants: null, parking: null, last5s: [], mgmt: 0, mgmtMode: '', guarantor: null, docs: { addr: true, life: true, idT: true, idG: true, scan: true, efile: true, notary: false, photoIn: true } });
+  }
+  pastLease('c1', 'A-9-8', { tenant: '曾小姐', ph: '318', start: '2023-03-01', end: '2024-02-29', rent: 15400, endReason: '到期續約' });
+  pastLease('c1', 'A-9-8', { tenant: '曾小姐', ph: '318', start: '2024-03-01', end: '2025-02-28', rent: 15600, source: '續約', endReason: '提前解約', moveOut: '2024-11-30' });
+  pastLease('c1', 'A-9-8', { tenant: '賴先生', ph: '607', start: '2025-01-01', end: '2025-12-31', rent: 15800, endReason: '到期不續約', moveOut: '2026-01-31' });
+  pastLease('c3', '2號房', { tenant: '郭先生', ph: '842', start: '2024-09-01', end: '2025-08-31', rent: 9500, endReason: '到期不續約' });
 
   var rn = 0;
   function rec(l, item, month, due, amount, paid) { st.receivables.push({ id: 'rv' + (++rn), leaseId: l.id, item: item, month: month, due: due, amount: amount, paid: paid }); }
@@ -997,7 +1007,7 @@ function pCase(id, sub) {
   var s = caseStats(c); var ks = S.contracts.filter(function (k) { return k.caseId === id; }); var hs = S.houses.filter(function (h) { return h.caseId === id; }); var pk = S.parking.filter(function (p) { return p.caseId === id; });
   var tab = ['contracts', 'houses', 'parking'].indexOf(sub) >= 0 ? sub : 'units';
   var endMin = ks.map(function (k) { return k.end; }).sort()[0];
-  var tabs = [['units', '#/case/' + id, '單元 ' + s.us.length], ['contracts', '#/case/' + id + '/contracts', '合約 ' + ks.length], ['houses', '#/case/' + id + '/houses', '房屋 ' + hs.length]];
+  var tabs = [['units', '#/case/' + id, '單元 ' + s.us.length], ['contracts', '#/case/' + id + '/contracts', '主約 ' + ks.length], ['houses', '#/case/' + id + '/houses', '房屋 ' + hs.length]];
   if (pk.length) tabs.push(['parking', '#/case/' + id + '/parking', '車位 ' + pk.length]);
   var body = '';
   if (tab === 'units') {
@@ -1103,6 +1113,25 @@ function settlementPanel(s) {
       '<button type="button" class="btn primary" data-act="st" data-s="' + s.id + '" data-f="refund"' + (bl.length ? ' disabled aria-describedby="stwhy"' : '') + '>送出退款</button>' +
       (bl.length ? '<div class="why" id="stwhy"><b>尚無法退款：</b>' + bl.map(function (w) { return '<span>・' + w + '</span>'; }).join('') + '</div>' : '')) + '</section>';
 }
+function histLeases(u) { return S.leases.filter(function (l) { return l.unitId === u.id && !l.active; }).sort(function (a, b) { return a.start < b.start ? 1 : -1; }); }
+function histCard(u) {
+  var hs = histLeases(u);
+  return '<details class="card pad histbox"><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:32px"><h2 class="h2s serif" id="hist-h">歷史租約</h2>' + ic('chev', 18) + '</summary>' +
+    '<div style="margin-top:6px">' + (hs.length ? '<div class="recs">' + hs.map(function (l) {
+      var st = first(S.settlements, function (x) { return x.leaseId === l.id; });
+      var out = st ? st.moveOutDate : l.moveOut;
+      return '<details class="rec hist" style="display:block"><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px">' +
+        '<span><b style="font-weight:500">' + esc(l.tenant) + '</b>' + (l.source !== '新租' ? '<span class="muted">（' + esc(l.source) + '）</span>' : '') + '<br><span class="muted num">' + roc(l.start) + '–' + roc(l.end) + '｜月租 ' + money(l.rent) + '</span></span>' +
+        '<span class="pill ' + (l.endReason === '提前解約' ? 'p-amber' : 'p-gray') + '">' + esc(l.endReason || '已結束') + '</span></summary>' +
+        '<div style="padding:6px 0 2px">' +
+        '<div class="kv"><span>簽約日</span><span class="num">' + roc(l.signDate) + '</span></div>' +
+        '<div class="kv"><span>租約押金</span><span class="num">' + money(l.deposit) + (l.deco ? '＋裝潢保證金 ' + num(l.deco) : '') + '</span></div>' +
+        (l.endReason === '到期續約' ? '<div class="kv"><span>結束</span><span>到期續約，接續下一份租約</span></div>' : '<div class="kv"><span>退租點交日</span><span class="num">' + roc(out) + '</span></div>') +
+        (st ? '<div class="kv"><span>退租結算</span><span>' + (st.refundedDate ? '已退款 ' + roc(st.refundedDate) : '進行中') + '</span></div>' : '') +
+        '</div></details>';
+    }).join('') + '</div>' : '<p class="muted small">尚無歷史租約</p>') +
+    '<p class="muted small" style="margin-top:8px">已結束的租約只供調閱、不可刪除（D-108）；系統啟用前的舊租約待舊資料轉入（S-22）</p></div></details>';
+}
 function recentRecords(u) {
   var lids = S.leases.filter(function (l) { return l.unitId === u.id; }).map(function (l) { return l.id; });
   var R = [];
@@ -1164,7 +1193,7 @@ function pUnit(id) {
   var sub = c.name + '｜案場 ' + esc(bldName(h)) + (u.building ? ' ' + u.building : '') + '｜' + u.type + '｜日曆寫法：' + u.aliases.join('、') +
     '<br><a href="javascript:void 0" data-act="house" data-id="' + h.id + '">' + esc(h.addr) + '</a>｜所屬合約 <a href="#/case/' + c.id + '/contracts">' + esc(k.no) + '</a>，迄日 ' + roc(k.end);
   return head(u.code + ' ' + chip(u.status), sub, '', ['#/case/' + c.id, c.name]) +
-    '<div class="upage"><div class="col">' + info + (st ? settlementPanel(st) : '') + '</div><div class="col">' + acts + recentRecords(u) + '</div></div>';
+    '<div class="upage"><div class="col">' + info + (st ? settlementPanel(st) : '') + histCard(u) + '</div><div class="col">' + acts + recentRecords(u) + '</div></div>';
 }
 
 /* ================= 帳務 ================= */
@@ -1653,7 +1682,7 @@ function openAction(act, ds) {
         if (d1) ded.push({ item: '租金', amount: d1 }); if (d2) ded.push({ item: '管理費', amount: d2 });
         ded = ded.concat(autoDed);
         [[f.c1, f.a1], [f.c2, f.a2]].forEach(function (x) { if (String(x[1] || '').trim()) { var n = needInt(x[1], '應扣他項金額', true); if (n) ded.push({ item: x[0], amount: n }); } });
-        l.active = false; u.status = '整備中'; u.statusSince = d;
+        l.active = false; l.endReason = l.term ? '提前解約' : '到期不續約'; l.moveOut = d; u.status = '整備中'; u.statusSince = d;
         S.settlements.push({ id: uid('s'), leaseId: l.id, unitId: u.id, moveOutDate: d, refundItems: refundI, deductItems: ded, utils: { water: optInt(f.uw, '水費'), elec: optInt(f.ue, '電費'), gas: optInt(f.ug, '瓦斯費') }, draftOk: null, signedDate: null, passbookDate: null, residency: !!l.residency, movedOutDate: null, nameMatch: true, checks: { meter: false, settle: false, rename: false, keys: false }, refundedDate: null });
         return '已建立退租結算初稿，單元轉為整備中';
       } });
