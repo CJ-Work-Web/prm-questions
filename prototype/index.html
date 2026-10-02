@@ -850,16 +850,17 @@ function cardDef(key) { return first(CARD_DEFS, function (d) { return d.key === 
 
 /* ================= 版面 ================= */
 function route() { return location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent); }
-function navKey(page) { return { home: 'home', todo: 'home', cases: 'cases', 'case': 'cfg', unit: 'cases', billing: 'billing', utility: 'billing', maint: 'maint', ref: 'maint', filings: 'filings', reports: 'reports', report: 'reports', casecfg: 'cfg', sitecfg: 'cfg', company: 'cfg', lifecfg: 'cfg', login: 'cfg', more: 'more', search: 'home' }[page] || 'home'; }
+function navKey(page) { return { home: 'home', todo: 'todo', cases: 'cases', 'case': 'cfg', unit: 'cases', billing: 'billing', utility: 'billing', maint: 'maint', ref: 'maint', filings: 'filings', reports: 'reports', report: 'reports', casecfg: 'cfg', sitecfg: 'cfg', company: 'cfg', lifecfg: 'cfg', login: 'cfg', more: 'more', search: 'home' }[page] || 'home'; }
 function sideNav(page) {
   var k = navKey(page);
-  var items = [['cases', '契約', 'building', '#/cases'], ['billing', '帳務', 'wallet', '#/billing'], ['maint', '維修', 'wrench', '#/maint'], ['filings', '申報', 'file', '#/filings'], ['reports', '報表', 'chart', '#/reports']];
+  /* 依首頁功能卡片的順序（D-157） */
+  var items = [['cases', '契約', 'building', '#/cases'], ['maint', '維修', 'wrench', '#/maint'], ['billing', '帳務', 'wallet', '#/billing'], ['filings', '申報', 'file', '#/filings'], ['todo', '待辦', 'list', '#/todo'], ['reports', '報表', 'chart', '#/reports']];
   return '<a class="brand" href="#/" title="回首頁" style="text-decoration:none;color:inherit"><span class="brand-mark">' + ic('home') + '</span><b>包租管理</b></a>' +
     '<div class="nav">' + items.map(function (x) { return '<a href="' + x[3] + '"' + (k === x[0] ? ' aria-current="page"' : '') + '>' + ic(x[2]) + x[1] + '</a>'; }).join('') + '</div>' ;
 }
 function tabbar(page) {
   var k = navKey(page);
-  return '<a href="#/"' + (k === 'home' ? ' aria-current="page"' : '') + '>' + ic('home', 24) + '首頁</a>' +
+  return '<a href="#/"' + (k === 'home' || k === 'todo' ? ' aria-current="page"' : '') + '>' + ic('home', 24) + '首頁</a>' +
     '<a href="#/cases"' + (k === 'cases' ? ' aria-current="page"' : '') + '>' + ic('building', 24) + '契約</a>' +
     '<button type="button" data-act="quick-sheet"><span class="plus">' + ic('plus', 20, 2.2) + '</span>登錄</button>' +
     '<a href="#/more"' + (['more', 'billing', 'maint', 'filings', 'reports'].indexOf(k) >= 0 ? ' aria-current="page"' : '') + '>' + ic('menu', 24) + '更多</a>';
