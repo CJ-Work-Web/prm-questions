@@ -1772,7 +1772,7 @@ function coEdit(k) {
   } });
 }
 function pSearch() {
-  return mtop(['#/', '首頁']) + '<h1 class="serif" style="font-size:25px;margin-bottom:12px">搜尋</h1><div class="sbox" style="width:100%"><label class="sr" for="mq">搜尋</label>' + ic('search') + '<input id="mq" type="search" autocomplete="off" placeholder="戶號、9-8、青田2、地址、稱呼、電話末碼" data-search="inline" autofocus></div><div id="mres" class="card list" hidden style="margin-top:8px"></div><p class="muted small" style="margin-top:12px">可輸入日曆慣用寫法（如「9-8」「青田2」「松園2A」）、地址片段或電話末 3 碼。</p>';
+  return mtop(['#/', '首頁']) + '<h1 class="serif" style="font-size:25px;margin-bottom:12px">搜尋</h1><div class="sbox" style="width:100%"><label class="sr" for="mq">搜尋</label>' + ic('search') + '<input id="mq" type="search" autocomplete="off" placeholder="單元名稱（如 A9-8、青田2）、地址、稱呼、電話末碼" data-search="inline" autofocus></div><div id="mres" class="card list" hidden style="margin-top:8px"></div><p class="muted small" style="margin-top:12px">可輸入單元名稱（＝日曆寫法，如「A9-8」「青田2」「松園2A」）、地址片段或電話末 3 碼。</p>';
 }
 function notFound() { return head('查無此頁', '', '', ['#/', '首頁']) + '<div class="empty">查無資料，試用資料可能已重設。</div>'; }
 
@@ -1798,7 +1798,7 @@ function searchPool(input) { return input && input.getAttribute && input.getAttr
 function renderSearch(input) {
   var mode = input.getAttribute('data-search'); var q = input.value; var pool = searchPool(input); var rs = searchUnits(q, pool);
   var f = cfCur(); var scoped = pool && (f.site.length || f.kase.length || f.st.length);
-  if (mode === 'drop') { var box = $('#sdrop'); if (!q.trim()) { box.hidden = true; return; } box.hidden = false; box.innerHTML = rs.length ? rs.map(function (u) { return resRow(u); }).join('') : '<div class="snone">' + (scoped ? '目前篩選結果中查無「' + esc(q) + '」，可清除篩選後再搜尋' : '查無「' + esc(q) + '」，可改用戶號、日曆寫法、地址或電話末 3 碼搜尋') + '</div>'; }
+  if (mode === 'drop') { var box = $('#sdrop'); if (!q.trim()) { box.hidden = true; return; } box.hidden = false; box.innerHTML = rs.length ? rs.map(function (u) { return resRow(u); }).join('') : '<div class="snone">' + (scoped ? '目前篩選結果中查無「' + esc(q) + '」，可清除篩選後再搜尋' : '查無「' + esc(q) + '」，可改用單元名稱、地址或電話末 3 碼搜尋') + '</div>'; }
   if (mode === 'inline') { var m = $('#mres'); if (!q.trim()) { m.hidden = true; return; } m.hidden = false; m.innerHTML = rs.length ? rs.map(function (u) { return resRow(u); }).join('') : '<div class="snone">查無「' + esc(q) + '」</div>'; }
   if (mode === 'pick') { $('#pres').innerHTML = pickList(q, input.getAttribute('data-k')); }
 }
@@ -1833,7 +1833,7 @@ function pickList(q, kind) {
 }
 function openPick(kind, title, sub) {
   var T = { expense: '登錄費用：選擇單元', repair: '報修：選擇單元', status: '狀態回報：選擇單元', contact: '聯繫紀錄：選擇單元', pay: '登錄收款：選擇單元' };
-  modal(title || T[kind], '<div class="sbox" style="width:100%">' + ic('search') + '<input type="search" autocomplete="off" aria-label="搜尋單元" placeholder="單元名稱、地址、稱呼" data-search="pick" data-k="' + kind + '"></div><div id="pres" class="plist">' + pickList('', kind) + '</div>', { sub: sub || (kind === 'status' ? '預設列出空房（整備中、招租中、特殊狀況）；也可以搜尋' : '可輸入戶號、日曆寫法、地址或稱呼') });
+  modal(title || T[kind], '<div class="sbox" style="width:100%">' + ic('search') + '<input type="search" autocomplete="off" aria-label="搜尋單元" placeholder="單元名稱、地址、稱呼" data-search="pick" data-k="' + kind + '"></div><div id="pres" class="plist">' + pickList('', kind) + '</div>', { sub: sub || (kind === 'status' ? '預設列出空房（整備中、招租中、特殊狀況）；也可以搜尋' : '可輸入單元名稱、地址或稱呼') });
 }
 
 /* ================= 動作 ================= */
@@ -2113,7 +2113,7 @@ document.addEventListener('click', function (e) {
         if (gx) { gx.name = name; gx.caseIds = ids; } else { var nid = uid('g'); S.groups.push({ id: nid, name: name, caseIds: ids }); S.curGroup = nid; }
         return '已儲存群組「' + name + '」（' + ids.length + ' 個案件）'; } }); return; }
   if (act === 'newcase') {
-    modal('新增案件（引導式檢核）', '<p class="muted small" style="margin:0 0 8px">新增案件＝登錄一份新簽的上層合約。擴充的補充合約加在原案件，不另開；租賃移轉另開新案件（D-109）。</p><ol style="padding-left:20px;line-height:1.9;margin:0"><li>上層合約：案件名稱／代號、取得方式、出租方、承辦人、合約起訖、免租期、租金分段、付款週期與方式、押金／履約保證金、選擇權、通報義務</li><li>案件設定：成本分攤口徑、空間裝修攤提、合約範本、滯納金條款預設</li><li>匯入房屋與出租單元（地址、建號、坪數、土地標的、日曆別名），並指定所在案場；新的案場另到「案場設定」建立公共表計與費用負擔預設（D-110）</li><li>需要和其他案件一起看時，加入群組（D-111）</li><li>可以沿用既有案件的設定當範本，再逐項確認</li><li>啟用前檢核：必填項齊全才能啟用</li></ol><p class="muted small" style="margin-top:8px">specs/07 §3、§6。試用版不開放新增。</p>'); return;
+    modal('新增案件（引導式檢核）', '<p class="muted small" style="margin:0 0 8px">新增案件＝登錄一份新簽的上層合約。擴充的補充合約加在原案件，不另開；租賃移轉另開新案件（D-109）。</p><ol style="padding-left:20px;line-height:1.9;margin:0"><li>上層合約：案件名稱／代號、取得方式、出租方、承辦人、合約起訖、免租期、租金分段、付款週期與方式、押金／履約保證金、選擇權、通報義務</li><li>案件設定：成本分攤口徑、空間裝修攤提、合約範本、滯納金條款預設</li><li>匯入房屋與出租單元（地址、建號、坪數、土地標的；單元名稱＝同事在日曆的寫法，全系統唯一，D-154），並指定所在案場；新的案場另到「案場設定」建立公共表計與費用負擔預設（D-110）</li><li>需要和其他案件一起看時，加入群組（D-111）</li><li>可以沿用既有案件的設定當範本，再逐項確認</li><li>啟用前檢核：必填項齊全才能啟用</li></ol><p class="muted small" style="margin-top:8px">specs/07 §3、§6。試用版不開放新增。</p>'); return;
   }
   if (act === 'st') {
     var s = byId(S.settlements, ds.s); var fl = ds.f;
