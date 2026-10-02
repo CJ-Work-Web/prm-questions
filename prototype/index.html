@@ -157,6 +157,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 .btn.outline{background:var(--card);border-color:var(--accent);color:var(--accent-d)}
 .btn.ghost{background:transparent;border-color:#DCD2C3;color:var(--ink2)}
 .btn.sm{height:36px;padding:0 12px;font-size:14px}
+.docchk{cursor:pointer}.docchk input{width:22px;height:22px;accent-color:var(--accent);flex-shrink:0;margin:0;cursor:pointer}
 .btn:disabled,.btn:disabled:hover{background:#E3DCD1;border-color:#E3DCD1;color:#8A7F74;cursor:not-allowed}
 .chipbtn{height:44px;padding:0 16px;border-radius:22px;border:1px solid #DCD2C3;background:var(--card);cursor:pointer;font-size:14px;color:var(--ink2)}
 .chipbtn:disabled{background:#EFE9E0;color:#9A8F84;cursor:not-allowed;border-style:dashed}
@@ -1217,7 +1218,11 @@ function docsCard(l) {
   var items = [['phone', '承租人電話', !!l.phone, false], ['addr', '戶籍地址', l.docs.addr, true], ['guar', l.guarantor ? '連帶保證人 ' + esc(l.guarantor.name) + (l.guarantor.phone ? '' : '（缺電話）') : '無保證人 → 裝潢保證金 ' + (l.deco ? '已收' : '未收'), !!(l.guarantor ? l.guarantor.phone : l.deco), false], ['life', '珍愛生命條款', l.docs.life, true], ['idT', '承租人證件影本', l.docs.idT, true], ['idG', '保證人證件影本', l.docs.idG, true], ['scan', '合約掃描', l.docs.scan, true], ['efile', '電子檔', l.docs.efile, true], ['photoIn', '起租點交照片已存 NAS（只提醒、不擋流程，D-112）', l.docs.photoIn, true]].filter(function (x) { return (x[0] !== 'idG' || l.guarantor) && (x[0] !== 'photoIn' || l.start <= TODAY); });
   var short = diff(l.start, l.end) < 364;
   return '<details class="card pad"' + (miss.length ? ' open' : '') + '><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:32px"><b class="serif" style="font-size:17px">簽約要件</b>' + (miss.length ? '<span class="pill p-amber">缺 ' + miss.length + ' 項</span>' : '<span class="pill p-ok">齊備</span>') + '</summary>' +
-    items.map(function (x) { return '<div class="check"><span class="' + (x[2] ? 'ok' : 'muted') + '">' + ic(x[2] ? 'check' : 'alert', 20, 2) + '</span><span style="flex:1">' + x[1] + '</span>' + (!x[2] && x[3] ? '<button class="btn sm outline" data-act="doc-ok" data-l="' + l.id + '" data-k="' + x[0] + '">登錄齊備</button>' : '') + '</div>'; }).join('') +
+    items.map(function (x) {
+      /* 可由同事勾選的項目用核取方塊，勾＝齊備、取消勾＝回到缺件（D-144）；由其他資料判定的項目只顯示狀態 */
+      if (x[3]) return '<label class="check docchk"><input type="checkbox" data-change="doc" data-l="' + l.id + '" data-k="' + x[0] + '"' + (x[2] ? ' checked' : '') + '><span style="flex:1">' + x[1] + '</span>' + (x[2] ? '' : '<span class="pill p-amber">缺</span>') + '</label>';
+      return '<div class="check"><span class="' + (x[2] ? 'ok' : 'muted') + '" style="width:22px;display:flex;justify-content:center">' + ic(x[2] ? 'check' : 'alert', 20, 2) + '</span><span style="flex:1">' + x[1] + '</span><span class="muted small">依資料判定</span></div>';
+    }).join('') +
     '<p class="muted small">國籍別：' + l.nat + (l.nat === '外國' ? '（證件為護照＋居留證）' : '') + (short ? '｜<b>未滿一年租約</b>（短租不是申報豁免條件，照常申報）' : '') + '｜滯納金條款：' + (l.lateFee ? '有' : '無') + '（依適用範本帶入、可逐約修改，D-103）</p></details>';
 }
 function pUnit(id) {
@@ -1912,6 +1917,7 @@ document.addEventListener('click', function (e) {
 document.addEventListener('change', function (e) {
   var t = e.target; var k = t.getAttribute('data-change'); if (!k) return;
   if (k === 'task') { var x = byId(S.tasks, t.getAttribute('data-id')); x.done = t.checked; x.doneMeta = t.checked ? roc(TODAY).slice(4) + ' 完成' : ''; save(); render(); }
+  if (k === 'doc') { var ld = L(t.getAttribute('data-l')); ld.docs[t.getAttribute('data-k')] = t.checked; save(); render(); var nm = missingDocs(ld).length; toast((t.checked ? '已登錄齊備' : '已取消勾選') + (nm ? '，尚缺 ' + nm + ' 項' : '，簽約要件全部齊備')); return; }
   if (k === 'st-name') { byId(S.settlements, t.getAttribute('data-s')).nameMatch = t.checked; save(); render(); }
   if (k === 'st-check') { byId(S.settlements, t.getAttribute('data-s')).checks[t.getAttribute('data-k')] = t.checked; save(); render(); }
   if (k === 'life') { try { lifeSet(+t.getAttribute('data-i'), t.getAttribute('data-f'), t.type === 'checkbox' ? t.checked : t.value); save(); render(); } catch (err) { toast(String(err)); } return; }
