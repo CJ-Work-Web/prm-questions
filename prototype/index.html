@@ -19,7 +19,7 @@
   --bg:#F7F3EC;--card:#FFFDF9;--side:#EFE8DD;--line:#E5DDD0;--line2:#EDE6DA;--line3:#F3EEE6;
   --text:#2F2A25;--text2:#6B6158;--text3:#8A7F74;--ink2:#4A423B;
   --accent:#3F6B5C;--accent-d:#2E5044;--accent-s:#E3ECE6;
-  --red:#B3261E;--red-s:#FBE9E6;--amber:#8A5A00;--amber-s:#FBF0D9;--gray-s:#F0EBE3;
+  --red:#B3261E;--sev-red:#C8372D;--sev-amber:#E08A1E;--sev-green:#4C9A5E;--red-s:#FBE9E6;--amber:#8A5A00;--amber-s:#FBF0D9;--gray-s:#F0EBE3;
   --s-rent:#8B7F72;--s-list:#5E8FB3;--s-prep:#CDBB9E;--s-spec:#9C7AA0;
 }
 *{box-sizing:border-box}
@@ -105,6 +105,11 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 .b-red{background:var(--red-s);color:var(--red)}
 .b-amber{background:var(--amber-s);color:var(--amber)}
 .b-gray{background:var(--gray-s);color:var(--text2)}
+/* 待辦卡片優先度＝外框顏色（D-160）：紅＝高優先、橙＝中優先、綠＝持續追蹤 */
+.sev-red{border:2px solid var(--sev-red)}.sev-amber{border:2px solid var(--sev-amber)}.sev-gray{border:2px solid var(--sev-green)}
+.sevlist{display:flex;flex-direction:column;gap:8px}
+.sevlist .lrow{background:var(--card);border-radius:12px}
+.sevlist .lrow.sev-red{border:2px solid var(--sev-red)}.sevlist .lrow.sev-amber{border:2px solid var(--sev-amber)}.sevlist .lrow.sev-gray{border:2px solid var(--sev-green)}
 .tag{font-size:12px;padding:3px 8px;border-radius:6px;background:var(--accent-s);color:var(--accent-d);white-space:nowrap}
 .empty{padding:28px;text-align:center;color:var(--text2);background:var(--card);border:1px dashed var(--line);border-radius:14px}
 
@@ -132,6 +137,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 .p-amber{background:var(--amber-s);color:var(--amber)}
 .p-gray{background:var(--gray-s);color:var(--text2)}
 .p-ok{background:var(--accent-s);color:var(--accent-d)}
+.p-green{background:#E5F2E8;color:#2F6E3E}   /* 待辦「持續追蹤」級，與外框綠同色系（D-160） */
 
 /* 表格 */
 .tblwrap{overflow-x:auto}
@@ -880,9 +886,9 @@ function head(title, sub, right, back, nosearch) {
 function tabsNav(items, cur) { return '<nav class="tabs">' + items.map(function (x) { return '<a href="' + x[1] + '"' + (x[0] === cur ? ' aria-current="page"' : '') + '>' + x[2] + '</a>'; }).join('') + '</nav>'; }
 
 /* ================= 首頁 ================= */
-function legend() { return '<div class="legend"><span><i class="dot" style="background:var(--red)"></i>公司的期限將到或已過</span><span><i class="dot" style="background:#B7791F"></i>本月要處理</span><span><i class="dot" style="background:#A39889"></i>持續追蹤</span></div>'; }
+var SEVTXT = { red: '高優先', amber: '中優先', gray: '持續追蹤' };
 function cardHtml(c) {
-  return '<article class="card acard"><div class="acard-h">' + sevBadge(c.sev) + '<h3>' + c.title + '</h3>' + (c.admin ? '<span class="tag">限管理者</span>' : '') + '</div>' +
+  return '<article class="card acard sev-' + c.sev + '"><div class="acard-h"><h3>' + c.title + '<span class="sr">（' + SEVTXT[c.sev] + '）</span></h3>' + (c.admin ? '<span class="tag">限管理者</span>' : '') + '</div>' +
     '<div class="acount"><b>' + c.count + '</b><span>' + c.unit + '</span></div><p class="adetail">' + esc(c.headline) + '</p>' +
     '<a class="more" href="#/todo/' + c.key + '">查看全部' + ic('chev', 16, 2) + '</a></article>';
 }
@@ -947,7 +953,7 @@ function pHome() {
     frow(fi.length ? '<span class="muted">最近期限 ' + roc(fi[0].dl) + '（' + esc(uName(fi[0].f.unitId)) + '）</span>' : '<span class="muted">全部已辦理</span>')]);
   /* 待辦 */
   var cTodo = fcard('#/todo', 'list', '待辦', tot, '件待處理', [
-    frow('<span class="sevrow">' + [['red', '期限將到'], ['amber', '本月處理'], ['gray', '持續追蹤']].map(function (x) { return '<span class="pill p-' + x[0] + '">' + x[1] + ' ' + n[x[0]] + '</span>'; }).join('') + '</span>'),
+    frow('<span class="sevrow">' + [['red', '期限將到', 'red'], ['amber', '本月處理', 'amber'], ['gray', '持續追蹤', 'green']].map(function (x) { return '<span class="pill p-' + x[2] + '">' + x[1] + ' ' + n[x[0]] + '</span>'; }).join('') + '</span>'),
     frow('<span class="muted" style="white-space:nowrap">10 月例行作業</span><div class="bar" style="flex:1;max-width:140px"><span style="width:' + Math.round(td / S.tasks.length * 100) + '%"></span></div><span class="muted num">' + td + ' / ' + S.tasks.length + '</span>')]);
   /* 報表 */
   var vis = REPORTS.map(function (g) { return g[1].filter(function (r) { return !r[4] || isAdmin(); }).length; });
@@ -963,9 +969,9 @@ function pTodoHub() {
   var cs = cards(); var vis = cs.filter(function (c) { return c.count > 0; }); var hid = cs.filter(function (c) { return c.count === 0; });
   var total = sum(vis, function (c) { return c.count; });
   return head('待辦', '待處理事項 ' + total + ' 件｜' + rocW(TODAY), '', ['#/', '首頁']) +
-    '<section class="sec" aria-labelledby="need-h"><div class="sec-h"><h2 class="serif" id="need-h">需要處理</h2>' + legend() + '</div>' +
+    '<section class="sec" aria-labelledby="need-h"><div class="sec-h"><h2 class="serif" id="need-h">需要處理</h2></div>' +   /* 不放顏色圖例（D-160 第 5 點） */
     (vis.length ? '<div class="grid3 only-desk">' + vis.map(cardHtml).join('') + '</div>' +
-      '<div class="card list only-mob">' + vis.map(function (c) { return '<a class="lrow" href="#/todo/' + c.key + '">' + sevBadge(c.sev, 32) + '<span class="lmain"><b>' + c.title + '</b><small>' + esc(c.headline) + '</small></span><span class="num">' + c.count + '</span>' + ic('chev', 18, 2) + '</a>'; }).join('') + '</div>' : '<div class="empty">目前無待處理事項</div>') +
+      '<div class="sevlist only-mob">' + vis.map(function (c) { return '<a class="lrow sev-' + c.sev + '" href="#/todo/' + c.key + '"><span class="lmain"><b>' + c.title + '<span class="sr">（' + SEVTXT[c.sev] + '）</span></b><small>' + esc(c.headline) + '</small></span><span class="num">' + c.count + '</span>' + ic('chev', 18, 2) + '</a>'; }).join('') + '</div>' : '<div class="empty">目前無待處理事項</div>') +
     (hid.length ? '<p class="muted small">無待處理項目（已收合）：' + hid.map(function (c) { return c.title; }).join('、') + '</p>' : '') + '</section>' + tasksPanel();
 }
 
