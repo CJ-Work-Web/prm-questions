@@ -68,7 +68,7 @@
 <body>
 <div class="page">
   <h1>PRM System 規格確認 — 待確認問題單（可填寫）</h1>
-  <div class="meta">2026-09-30 更新（點交照片的線上儲存與 NAS 存放位置 1 題已回覆移除；目前沒有待回覆的問題）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
+  <div class="meta">2026-10-03 更新（新增 3 題：轉租月報與申報、請款單支存帳號、收款與催繳表格）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
 
   <div class="toolbar">
     <label>填寫人：<input id="writer" data-save="writer" placeholder="請輸入姓名"></label>
@@ -76,7 +76,41 @@
     <button class="secondary" onclick="exportAnswers('download')">匯出回覆（下載檔案）</button>
     <span class="hint">填寫內容會自動暫存在這台裝置的瀏覽器裡，關閉再開不會消失。填完請按「複製全部回覆」，貼到 LINE 或 email 傳回給發單人（電腦上也可改用「匯出回覆」下載檔案）。</span>
   </div>
-  <div class="ctx" style="padding:16px 4px">目前沒有待回覆的問題，感謝大家協助回覆。</div>
+  <div class="qcard" data-q="Q-053" data-title="轉租月報與申報的填寫方式">
+    <div class="qhead"><span><span class="qid">Q-053</span><span class="qtitle">轉租月報與申報的填寫方式</span></span><span class="assign">指派給：<input data-save="asg-Q-053" value="S" readonly></span></div>
+    <div class="ctx">背景：系統要自動產生政府標案的轉租月報（住戶清冊）和地政申報資料。我們用已送出的月報與回執推算了下列填法，請確認是否正確。</div>
+    <ol>
+      <li>一份月報涵蓋哪些合約？是一份上層合約（含擴充進來的房屋）產生一份，還是多份上層合約合併成一份？</li>
+      <li>月報「租賃起迄期間」的起日，填的是租約上的合約起日，還是實際點交（入住）的日期？</li>
+      <li>一戶拆成多間分別出租（分租）時，月報「轉租範圍」怎麼寫？是門牌後面加房號，還是有別的寫法？</li>
+      <li>分租的房間申報實價登錄時，「格局」填該房間的格局，還是整戶的格局？</li>
+      <li>申報時「租賃住宅服務類別」是否一律選一般轉租？有沒有案件要選社會住宅包租轉租？</li>
+      <li>房客續約或重新申報時，回執上的「租約標的流水號」（3 碼）沿用原本的號碼，還是重新配發？</li>
+      <li>上層合約擴充進來的房屋，包租申報是另外申報一次，還是更新原本的包租案件？包租期間填擴充房屋自己的起訖日，還是原合約的起訖日？</li>
+      <li>送件前會檢查「簽約日不能晚於起租日」。這裡的起租日，指的是合約起日，還是實際點交日？</li>
+    </ol>
+    <textarea class="ans" data-save="ans-Q-053" placeholder="回覆…"></textarea>
+  </div>
+  <div class="qcard" data-q="Q-054" data-title="請款單的「支存帳號」欄">
+    <div class="qhead"><span><span class="qid">Q-054</span><span class="qtitle">請款單的「支存帳號」欄</span></span><span class="assign">指派給：<input data-save="asg-Q-054" value="會計" readonly></span></div>
+    <div class="ctx">背景：系統要產出對外的租金／管理費請款單。請款單上有「支存帳號」欄，內容有的寫銀行分行與金額，有的寫 EDI 編號。</div>
+    <ol>
+      <li>「支存帳號」欄記的是公司付款用的支票存款帳號（付款方），還是房東的收款帳號？欄內的 EDI 編號是每次付款時產生的交易序號嗎？</li>
+    </ol>
+    <textarea class="ans" data-save="ans-Q-054" placeholder="回覆…"></textarea>
+  </div>
+  <div class="qcard" data-q="Q-055" data-title="收款與催繳表格、空置期的水電帳單">
+    <div class="qhead"><span><span class="qid">Q-055</span><span class="qtitle">收款與催繳表格、空置期的水電帳單</span></span><span class="assign">指派給：<input data-save="asg-Q-055" value="全員" readonly></span></div>
+    <div class="ctx">背景：系統要取代現行的收款明細、房源租約期限表、遲繳違約金明細與存證信函，下列五點需要確認。</div>
+    <ol>
+      <li>租金收款明細的「新起租」欄，填的是這份租約的合約起日，還是這間房第一次出租的日期？</li>
+      <li>房源租約期限表的「房間數」欄大多空白，有填的寫「2房」「3房」「套房」。這一欄要填什麼？新系統還需要這一欄嗎？</li>
+      <li>房客把一期租金分成好幾筆匯款付清時，遲繳違約金明細的「實際繳款日」以哪一天為準？（例如：最後一筆補足的那天）</li>
+      <li>存證信函範本有 3 個收件人欄位。第 2、第 3 欄通常寫誰？（例如：連帶保證人）</li>
+      <li>房屋空置期間，公司要繳該戶的水電瓦斯費。這些帳單現在怎麼處理、記在哪裡？如果新系統請內勤在公司付款後，把帳單金額登錄到該戶（用來計算該戶的損益），可以接受嗎？</li>
+    </ol>
+    <textarea class="ans" data-save="ans-Q-055" placeholder="回覆…"></textarea>
+  </div>
 
   <div class="savenote" id="savenote"></div>
 </div>
