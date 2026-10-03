@@ -372,7 +372,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 'use strict';
 /* ================= 基本工具 ================= */
 var TODAY = '2026-10-05';
-var KEY = 'prm-prototype-v12';
+var KEY = 'prm-prototype-v13';
 var S = null;
 var $ = function (sel) { return document.querySelector(sel); };
 
@@ -518,7 +518,7 @@ function seed() {
   function mkLease(u, o) {
     o = o || {};
     var start = o.start || ('20' + pick(['25-12', '26-01', '26-02', '26-03', '26-04', '26-05', '26-06', '26-07', '26-08', '26-09']) + '-01');
-    var l = { id: 'l' + (++ln), unitId: u.id, tenant: o.tenant || name(), phone: o.phone || phone(), start: start, end: o.end || addDays(addYears(start, 1), -1), rent: o.rent || u.listPrice, deposit: 0, deco: 0, dueDay: o.dueDay || pick([1, 1, 1, 5, 10]), renew: o.renew || '待詢問', residency: o.residency != null ? o.residency : r() < 0.2, signDate: o.signDate || addDays(start, -5), active: o.active != null ? o.active : true, source: '新租', nat: r() < 0.08 ? '外國' : '本國', lateFee: start >= '2026-01-01' ? true : r() < 0.5, occupants: u.caseId === 'c3' ? (r() < 0.25 ? 2 : 1) : null, parking: null, last5s: [String(10000 + Math.floor(r() * 89999))] };
+    var l = { id: 'l' + (++ln), unitId: u.id, tenant: o.tenant || name(), phone: o.phone || phone(), start: start, end: o.end || addDays(addYears(start, 1), -1), rent: o.rent || u.listPrice, deposit: 0, deco: 0, dueDay: o.dueDay || pick([1, 1, 1, 5, 10]), renew: o.renew || '待詢問', signDate: o.signDate || addDays(start, -5), active: o.active != null ? o.active : true, source: '新租', nat: r() < 0.08 ? '外國' : '本國', lateFee: start >= '2026-01-01' ? true : r() < 0.5, occupants: u.caseId === 'c3' ? (r() < 0.25 ? 2 : 1) : null, parking: null, last5s: [String(10000 + Math.floor(r() * 89999))] };
     l.deposit = l.rent * 2; l.deco = o.deco != null ? o.deco : (r() < 0.15 ? l.rent * 2 : 0);
     var hh = st.houses.filter(function (h) { return h.id === u.houseId; })[0]; l.mgmt = hh && hh.mgmt ? hh.mgmt : 0;
     l.mgmtMode = !l.mgmt ? '' : o.mgmtMode || (+u.id.replace(/\D/g, '') % 5 === 0 ? '含租金' : '另計');
@@ -536,12 +536,12 @@ function seed() {
   [['c1', 'A-5-3', '待詢問'], ['c1', 'A-7-8', '待詢問'], ['c1', 'B-6-1', '待詢問'], ['c2', '2號', '待詢問'], ['c3', '4號房', '續約'], ['c4', '1F-A', '續約'], ['c5', '4F-A', '續約']].forEach(function (a) { special[a[0] + '|' + a[1]] = { start: '2025-11-01', renew: a[2] }; });
   st.units.forEach(function (u) { if (u.status === '已出租') mkLease(u, special[u.caseId + '|' + u.code]); });
   var q2 = U('c3', '2號房'), g5 = U('c5', '5F-A');
-  var lq2 = mkLease(q2, { start: '2025-10-01', end: '2026-09-30', tenant: '蘇小姐', rent: 10000, residency: false, active: false, keepStatus: true, deco: 0 });
-  var lg5 = mkLease(g5, { start: '2025-10-01', end: '2026-09-30', tenant: '張小姐', rent: 13000, residency: true, active: false, keepStatus: true, deco: 0 });
+  var lq2 = mkLease(q2, { start: '2025-10-01', end: '2026-09-30', tenant: '蘇小姐', rent: 10000, active: false, keepStatus: true, deco: 0 });
+  var lg5 = mkLease(g5, { start: '2025-10-01', end: '2026-09-30', tenant: '張小姐', rent: 13000, active: false, keepStatus: true, deco: 0 });
   lq2.endReason = '到期不續約'; lg5.endReason = '到期不續約';
   /* 歷史租約示範（已結束、只供調閱；D-141） */
   function pastLease(c, code, o) {
-    st.leases.push({ id: 'lh' + (++ln), unitId: U(c, code).id, tenant: o.tenant, phone: '09xx-xxx-' + o.ph, start: o.start, end: o.end, rent: o.rent, deposit: o.rent * 2, deco: 0, dueDay: 1, renew: '', residency: false, signDate: addDays(o.start, -7), active: false, source: o.source || '新租', endReason: o.endReason, moveOut: o.moveOut || o.end, nat: '本國', lateFee: false, occupants: null, parking: null, last5s: [], mgmt: 0, mgmtMode: '', guarantor: null, docs: { addr: true, life: true, idT: true, idG: true, scan: true, efile: true, notary: false, photoIn: true } });
+    st.leases.push({ id: 'lh' + (++ln), unitId: U(c, code).id, tenant: o.tenant, phone: '09xx-xxx-' + o.ph, start: o.start, end: o.end, rent: o.rent, deposit: o.rent * 2, deco: 0, dueDay: 1, renew: '', signDate: addDays(o.start, -7), active: false, source: o.source || '新租', endReason: o.endReason, moveOut: o.moveOut || o.end, nat: '本國', lateFee: false, occupants: null, parking: null, last5s: [], mgmt: 0, mgmtMode: '', guarantor: null, docs: { addr: true, life: true, idT: true, idG: true, scan: true, efile: true, notary: false, photoIn: true } });
   }
   pastLease('c1', 'A-9-8', { tenant: '曾小姐', ph: '318', start: '2023-03-01', end: '2024-02-29', rent: 15400, endReason: '到期續約' });
   pastLease('c1', 'A-9-8', { tenant: '曾小姐', ph: '318', start: '2024-03-01', end: '2025-02-28', rent: 15600, source: '續約', endReason: '提前解約', moveOut: '2024-11-30' });
@@ -593,8 +593,8 @@ function seed() {
   });
 
   /* 退租結算（10 個項次） */
-  st.settlements.push({ id: 's1', leaseId: lq2.id, unitId: q2.id, moveOutDate: '2026-09-30', refundItems: [], deductItems: [{ item: '清潔費', amount: 1500 }], utils: { water: 320, elec: 500, gas: 0 }, draftOk: '2026-09-30', signedDate: '2026-10-01', passbookDate: '2026-10-01', residency: false, movedOutDate: null, nameMatch: true, checks: { meter: true, settle: true, rename: true, keys: true }, refundedDate: null });
-  st.settlements.push({ id: 's2', leaseId: lg5.id, unitId: g5.id, moveOutDate: '2026-09-30', refundItems: [], deductItems: [{ item: '清潔費', amount: 2000 }, { item: '設備賠償（牆面修補）', amount: 1500 }], utils: { water: 280, elec: 650, gas: 120 }, draftOk: '2026-10-01', signedDate: '2026-10-02', passbookDate: '2026-10-02', residency: true, movedOutDate: null, nameMatch: true, checks: { meter: true, settle: true, rename: false, keys: true }, refundedDate: null });
+  st.settlements.push({ id: 's1', leaseId: lq2.id, unitId: q2.id, moveOutDate: '2026-09-30', refundItems: [], deductItems: [{ item: '清潔費', amount: 1500 }], utils: { water: 320, elec: 500, gas: 0 }, draftOk: '2026-09-30', signedDate: '2026-10-01', passbookDate: '2026-10-01', resStatus: 'none', movedOutDate: null, movedVia: null, resLog: [], nameMatch: true, checks: { meter: true, settle: true, rename: true, keys: true }, refundedDate: null });
+  st.settlements.push({ id: 's2', leaseId: lg5.id, unitId: g5.id, moveOutDate: '2026-09-30', refundItems: [], deductItems: [{ item: '清潔費', amount: 2000 }, { item: '設備賠償（牆面修補）', amount: 1500 }], utils: { water: 280, elec: 650, gas: 120 }, draftOk: '2026-10-01', signedDate: '2026-10-02', passbookDate: '2026-10-02', resStatus: 'pending', movedOutDate: null, movedVia: null, resLog: [], nameMatch: true, checks: { meter: true, settle: true, rename: false, keys: true }, refundedDate: null });
 
   st.reservations.push({ id: 'r1', unitId: U('c5', '3F-B').id, payer: '何小姐', phone: '09xx-xxx-416', amount: 6500, date: '2026-09-27', holdUntil: '2026-10-04', status: '保留中' });
   st.reservations.push({ id: 'r2', unitId: U('c3', '9號房').id, payer: '江先生', phone: '09xx-xxx-273', amount: 4500, date: '2026-10-03', holdUntil: '2026-10-10', status: '保留中' });
@@ -758,8 +758,20 @@ function stRefundTotal(s) { var l = stLease(s); return l.deposit + (l.deco || 0)
 function utilPending(s) { return ['water', 'elec', 'gas'].filter(function (k) { return s.utils[k] == null; }); }
 function refundStart(s) {
   if (!s.signedDate || !s.passbookDate) return null;
-  if (s.residency && !s.movedOutDate) return null;
-  return [s.signedDate, s.passbookDate, s.movedOutDate].filter(Boolean).sort().pop();
+  if (s.resStatus !== 'none' && s.resStatus !== 'moved') return null;
+  return [s.signedDate, s.passbookDate, s.resStatus === 'moved' ? s.movedOutDate : null].filter(Boolean).sort().pop();
+}
+/* 戶籍（D-168）：簽約不記錄，退租點交時才問；未登錄或尚未遷出都不能退款（B-4）。承租人口頭或 LINE 告知就算數，告知日＝遷出確認日 */
+var RES_LABEL = { none: '未於本址設籍', moved: '已遷出', pending: '尚未遷出' };
+function resCode(label) { for (var k in RES_LABEL) if (RES_LABEL[k] === label) return k; return null; }
+function setRes(s, st, date, via) {
+  if (s.refundedDate) throw '已退款的結算不能修改設籍狀態（B-2）';
+  if (!RES_LABEL[st]) throw '請選擇設籍狀態';
+  if (st === 'moved' && !date) throw '已遷出要填遷出確認日（承租人告知日）';
+  if (st === 'moved' && via !== '口頭' && via !== 'LINE') throw '請選擇告知方式';
+  if (s.resStatus && s.resStatus !== st) s.resLog.push({ at: TODAY, role: S.role, from: s.resStatus, to: st });
+  s.resStatus = st; s.movedOutDate = st === 'moved' ? date : null; s.movedVia = st === 'moved' ? via : null;
+  return '已登錄戶籍：' + RES_LABEL[st] + (st === 'moved' ? '（' + roc(date) + ' ' + via + '告知）' : '');
 }
 /* 結算是否涵蓋全部未沖應收：應扣項依項目名稱抵用（同名先到期先抵），抵不完的就是漏列（一本帳守恆：押金＝退款＋沖銷＋應扣） */
 function stUncovered(s) {
@@ -790,7 +802,8 @@ function refundBlockers(s) {
   if (!s.signedDate) w.push('完整版尚未簽名');
   if (!s.passbookDate) w.push('尚未收到存摺影本');
   if (!s.nameMatch) w.push('退款帳戶戶名與承租人不同，不得退款（B-3）');
-  if (s.residency && !s.movedOutDate) w.push('承租人設籍本址，尚未確認遷出（B-4、D-054）');
+  if (!s.resStatus) w.push('尚未登錄戶籍是否遷出，點交時要詢問承租人（B-4、D-168）');
+  else if (s.resStatus === 'pending') w.push('承租人設籍本址，尚未確認遷出（B-4、D-054）');
   return w;
 }
 function leftText(left) { return left < 0 ? '已逾期 ' + (-left) + ' 天' : left === 0 ? '今天到期' : '剩 ' + left + ' 天'; }
@@ -1297,7 +1310,8 @@ function settlementPanel(s) {
       (s.signedDate ? '' : signDis ? '<p class="why">「登錄簽名」目前無法執行：' + signDis + '</p>' : '') +
       chk(!!s.passbookDate, '存摺影本已收', s.passbookDate, 'passbook', '登錄收件') +
       '<label class="check"><input type="checkbox" data-change="st-name" data-s="' + s.id + '"' + (s.nameMatch ? ' checked' : '') + ' style="width:22px;height:22px;accent-color:var(--accent)"><span style="flex:1">退款帳戶戶名與承租人相同</span><span class="muted small">（試用）可取消勾選以測試阻擋</span></label>' +
-      (s.residency ? (s.movedOutDate ? chk(true, '戶籍已遷出', s.movedOutDate) : '<div class="warnbox">' + ic('alert', 20, 2) + '<span style="display:flex;flex-direction:column;gap:8px"><span><b>戶籍尚未遷出</b>：承租人設籍本址，確認遷出後才能退款，退款期限也從那天起算</span><button class="btn sm outline" style="align-self:flex-start" data-act="st" data-s="' + s.id + '" data-f="moved">登錄遷出確認</button></span></div>') : '<div class="check"><span class="ok">' + ic('check', 20, 2.2) + '</span>承租人未在本址設籍，不需確認遷出</div>') +
+      (!s.resStatus || s.resStatus === 'pending' ? '<div class="warnbox">' + ic('alert', 20, 2) + '<span style="display:flex;flex-direction:column;gap:8px"><span>' + (s.resStatus ? '<b>戶籍尚未遷出</b>：承租人設籍本址，告知遷出後才能退款，退款期限也從告知日起算' : '<b>尚未登錄戶籍</b>：點交時詢問承租人是否在本址設籍；沒登錄不能退款（D-168）') + '</span>' + '<button class="btn sm outline" style="align-self:flex-start" data-act="st" data-s="' + s.id + '" data-f="res">' + (s.resStatus ? '登錄遷出' : '登錄戶籍狀態') + '</button></span></div>' : '<div class="check"><span class="ok">' + ic('check', 20, 2.2) + '</span><span style="flex:1">' + (s.resStatus === 'moved' ? '戶籍已遷出（' + s.movedVia + '告知）' : '承租人未在本址設籍，不需確認遷出') + '</span>' + (s.resStatus === 'moved' ? '<span class="muted small num">' + roc(s.movedOutDate) + '</span>' : '') + '<button class="btn sm ghost" data-act="st" data-s="' + s.id + '" data-f="res">修改</button></div>') +
+      (s.resLog.length ? '<p class="muted small">設籍狀態修改紀錄：' + s.resLog.map(function (x) { return roc(x.at) + ' ' + RES_LABEL[x.from] + '→' + RES_LABEL[x.to]; }).join('；') + '</p>' : '') +
       '<p class="small ' + (start ? '' : 'muted') + '">' + (start ? '退款期限 <b>' + roc(addWorkdays(start, 3)) + '</b>（起算日 ' + roc(start) + '＋3 個工作天）' : '退款期限：條件齊備後才開始起算（D-054）') + '</p>' +
       '<button type="button" class="btn primary" data-act="st" data-s="' + s.id + '" data-f="refund"' + (bl.length ? ' disabled aria-describedby="stwhy"' : '') + '>送出退款</button>' +
       (bl.length ? '<div class="why" id="stwhy"><b>尚無法退款：</b>' + bl.map(function (w) { return '<span>・' + w + '</span>'; }).join('') + '</div>' : '')) + '</section>';
@@ -1354,7 +1368,6 @@ function signCard(l) {
     '<div style="margin:6px 0 10px">' +
     kv('連帶保證人', l.guarantor ? esc(l.guarantor.name) + (l.guarantor.phone ? '｜<span class="num">' + esc(l.guarantor.phone) + '</span>' : '｜<span class="pill p-amber">缺電話</span>') : '無（已收裝潢保證金）') +
     kv('身分證字號', '<span style="display:inline-flex;gap:8px;align-items:center"><span class="num" id="idno">A1●●●●●' + String(l.id).replace(/\D/g, '').padStart(3, '0').slice(-3) + '</span><button type="button" class="btn sm ghost" data-act="reveal">顯示</button></span>') +
-    kv('是否在本址設籍', l.residency ? '是（退租時須確認遷出）' : '否') +
     kv('簽約日（承租人簽名日）', '<span class="num">' + roc(l.signDate) + '</span><br><small class="muted">申報期限 ' + roc(addDays(l.signDate, 30)) + (l.signDate > l.start ? '｜簽約日晚於起租日，主管機關必查' : '') + '</small>') +
     kv('租約押金' + (l.deco ? '＋裝潢保證金' : ''), '<span class="num">' + money(l.deposit) + (l.deco ? '＋' + num(l.deco) : '') + '</span>') +
     (l.occupants ? kv('實際入住人數', l.occupants + ' 人（公共水費按人數分攤）') : '') +
@@ -1937,7 +1950,7 @@ function openAction(act, ds) {
       '<div class="row2">' + fld('月租金', inp('rent', u.listPrice, 'inputmode="numeric"')) + fld('每月繳款日', inp('due', 1, 'inputmode="numeric"')) + '</div>' +
       '<div class="row2">' + fld('連帶保證人（選填）', inp('gname', '', 'placeholder="稱呼"')) + fld('保證人電話', inp('gphone', '', 'inputmode="tel"')) + '</div>' +
       '<div class="row2">' + fld('保證人國籍別', sel('gnat', ['本國', '外國'])) + '<span></span></div>' +
-      '<label class="fld inline"><input type="checkbox" name="deco"><span>沒有本國連帶保證人，另收 2 個月裝潢保證金（R-007）</span></label><label class="fld inline"><input type="checkbox" name="res"><span>承租人會在本址設籍（退租時須確認遷出才能退押金）</span></label>' +
+      '<label class="fld inline"><input type="checkbox" name="deco"><span>沒有本國連帶保證人，另收 2 個月裝潢保證金（R-007）</span></label>' +
       (H(u.houseId).mgmt ? fld('管理費（' + money(H(u.houseId).mgmt) + '／月）', sel('mgmtMode', ['另計', '含租金']), '另計＝房客另繳、另立應收；含租金＝不另收，由公司代繳（specs/05 §4.1）') : '') +
       (u.caseId === 'c3' ? '<div class="row2">' + fld('實際入住人數', sel('occ', ['1', '2'])) + '<span></span></div>' : '') +
       fld('特約條款（選填）', '<textarea name="special" placeholder="範本以外的約定"></textarea>', '印在合約電子檔條文最後（D-155）'), {
@@ -1948,7 +1961,7 @@ function openAction(act, ds) {
         var domG = hasG && f.gnat !== '外國';
         if (!domG && !f.deco) throw hasG ? '保證人為外國籍時，仍須收 2 個月裝潢保證金（R-007、D-113）' : '沒有連帶保證人時，一定要收 2 個月裝潢保證金（R-007）';
         if (domG && f.deco) throw '有本國連帶保證人就不用收裝潢保證金，請擇一';
-        var nl = { id: uid('l'), unitId: u.id, tenant: t, phone: ph, start: s, end: e, rent: rent, deposit: rent * 2, deco: f.deco ? rent * 2 : 0, dueDay: due, renew: '待詢問', residency: !!f.res, signDate: sd, active: true, source: '新租', nat: f.nat, lateFee: true, occupants: u.caseId === 'c3' ? +f.occ : null, mgmt: H(u.houseId).mgmt || 0, mgmtMode: H(u.houseId).mgmt ? f.mgmtMode : '', parking: null, last5s: [], guarantor: hasG ? { name: hasG, phone: String(f.gphone || '').trim(), nat: f.gnat || '本國' } : null, docs: { addr: false, life: false, idT: false, idG: false, scan: false, efile: false, notary: false, photoIn: false }, special: String(f.special || '').trim() };
+        var nl = { id: uid('l'), unitId: u.id, tenant: t, phone: ph, start: s, end: e, rent: rent, deposit: rent * 2, deco: f.deco ? rent * 2 : 0, dueDay: due, renew: '待詢問', signDate: sd, active: true, source: '新租', nat: f.nat, lateFee: true, occupants: u.caseId === 'c3' ? +f.occ : null, mgmt: H(u.houseId).mgmt || 0, mgmtMode: H(u.houseId).mgmt ? f.mgmtMode : '', parking: null, last5s: [], guarantor: hasG ? { name: hasG, phone: String(f.gphone || '').trim(), nat: f.gnat || '本國' } : null, docs: { addr: false, life: false, idT: false, idG: false, scan: false, efile: false, notary: false, photoIn: false }, special: String(f.special || '').trim() };
         S.leases.push(nl); setStatus(u, '已出租', s);
         var credit = 0; if (res) { res.status = '已轉簽約'; credit = res.amount; }
         [['租約押金', nl.deposit]].concat(nl.deco ? [['裝潢保證金', nl.deco]] : [], [['租金', rent]], nl.mgmtMode === '另計' ? [['管理費', nl.mgmt]] : []).forEach(function (x) { var pd = Math.min(credit, x[1]); credit -= pd; S.receivables.push({ id: uid('rv'), leaseId: nl.id, item: x[0], month: s.slice(0, 7), due: s, amount: x[1], paid: pd }); });
@@ -1973,7 +1986,7 @@ function openAction(act, ds) {
       '<div class="row2">' + fld('9. 應扣他項', sel('c1', cats, '清潔費')) + fld('金額', inp('a1', 1500, 'inputmode="numeric"')) + '</div>' +
       '<div class="row2">' + fld('10. 應扣他項', sel('c2', cats, '設備賠償')) + fld('金額', inp('a2', '', 'inputmode="numeric"'), '設備賠償金額由協商決定，可查<a href="#/ref/depr" data-act="depr">折舊參考表</a>') + '</div>' +
       fld('點交後單元狀態', sel('after', ['整備中', '招租中（屋況良好直接上架）']), '已出租算到點交日當天，次日起轉為所選狀態（D-142）') +
-      '<p class="muted small">承租人在本址設籍：<b>' + (l.residency ? '是（退款前須確認遷出，D-054）' : '否') + '</b>——依租約紀錄，點交時不可更改；如需更正須由管理者修改租約並留紀錄（D-108）</p>', { sub: '承租人 ' + esc(l.tenant) + '｜押金 ' + money(l.deposit) + (l.deco ? '＋裝潢保證金 ' + money(l.deco) + '（分列）' : '') + '。初稿的水電瓦斯可以先「待結清」（D-050）；點交後單元轉為整備中，屋況良好可直接轉招租中', submit: '建立結算初稿', onSubmit: function (f) {
+      fld('戶籍（確認書第 9 列）', sel('res', ['（尚未詢問）', '未於本址設籍', '尚未遷出', '已遷出（點交時口頭告知）'], '（尚未詢問）'), '點交時詢問承租人；簽約不記錄設籍。沒登錄或尚未遷出都不能退款，之後可在結算補登（D-168）'), { sub: '承租人 ' + esc(l.tenant) + '｜押金 ' + money(l.deposit) + (l.deco ? '＋裝潢保證金 ' + money(l.deco) + '（分列）' : '') + '。初稿的水電瓦斯可以先「待結清」（D-050）；點交後單元轉為整備中，屋況良好可直接轉招租中', submit: '建立結算初稿', onSubmit: function (f) {
         var d = needDate(f.date, '點交日'); var refundI = [], ded = [];
         var r1 = needInt(f.r1 || 0, '應退預繳租金', true), r2 = needInt(f.r2 || 0, '應退預繳管理費', true);
         if (r1) refundI.push({ item: '應退預繳租金', amount: r1 }); if (r2) refundI.push({ item: '應退預繳管理費', amount: r2 });
@@ -1982,7 +1995,7 @@ function openAction(act, ds) {
         ded = ded.concat(autoDed);
         [[f.c1, f.a1], [f.c2, f.a2]].forEach(function (x) { if (String(x[1] || '').trim()) { var n = needInt(x[1], '應扣他項金額', true); if (n) ded.push({ item: x[0], amount: n }); } });
         l.active = false; l.endReason = l.term ? '提前解約' : '到期不續約'; l.moveOut = d; var aft = f.after === '招租中（屋況良好直接上架）' ? '招租中' : '整備中'; setStatus(u, aft, addDays(d, 1));
-        S.settlements.push({ id: uid('s'), leaseId: l.id, unitId: u.id, moveOutDate: d, refundItems: refundI, deductItems: ded, utils: { water: optInt(f.uw, '水費'), elec: optInt(f.ue, '電費'), gas: optInt(f.ug, '瓦斯費') }, draftOk: null, signedDate: null, passbookDate: null, residency: !!l.residency, movedOutDate: null, nameMatch: true, checks: { meter: false, settle: false, rename: false, keys: false }, refundedDate: null });
+        S.settlements.push({ id: uid('s'), leaseId: l.id, unitId: u.id, moveOutDate: d, refundItems: refundI, deductItems: ded, utils: { water: optInt(f.uw, '水費'), elec: optInt(f.ue, '電費'), gas: optInt(f.ug, '瓦斯費') }, draftOk: null, signedDate: null, passbookDate: null, resStatus: f.res === '已遷出（點交時口頭告知）' ? 'moved' : resCode(f.res), movedOutDate: f.res === '已遷出（點交時口頭告知）' ? d : null, movedVia: f.res === '已遷出（點交時口頭告知）' ? '口頭' : null, resLog: [], nameMatch: true, checks: { meter: false, settle: false, rename: false, keys: false }, refundedDate: null });
         return '已建立退租結算初稿，單元自 ' + roc(addDays(d, 1)) + ' 起轉為' + aft;
       } });
   } else if (act === 'notice-make') {
@@ -2124,11 +2137,12 @@ document.addEventListener('click', function (e) {
   }
   if (act === 'st') {
     var s = byId(S.settlements, ds.s); var fl = ds.f;
-    var lab = { draft: '承租人確認初稿', sign: '完整版簽名', passbook: '存摺影本收件', moved: '戶籍遷出確認' };
+    var lab = { draft: '承租人確認初稿', sign: '完整版簽名', passbook: '存摺影本收件' };
     if (fl === 'refund') { var bl = refundBlockers(s); if (bl.length) { toast('尚無法退款：' + bl[0]); return; } modal('送出退款', '<p>應退 ' + money(stRefundTotal(s)) + ' 給 ' + esc(stLease(s).tenant) + '</p><p class="muted small" style="margin-top:8px">送出後結算鎖定，之後發現錯誤只能開更正版（D-060、B-2）。結算已列入的未沖應收會以押金扣抵沖銷。</p>', { submit: '確定退款', onSubmit: function () { return doRefund(s); } }); return; }
     if (fl === 'util') { modal('水電瓦斯結清金額', '<div class="row2">' + fld('水費', inp('w', s.utils.water, 'inputmode="numeric"')) + fld('電費', inp('e', s.utils.elec, 'inputmode="numeric"')) + '</div><div class="row2">' + fld('瓦斯費', inp('g', s.utils.gas, 'inputmode="numeric"'), '沒有瓦斯填 0') + '<span></span></div><p class="muted small">外勤拍表 → 內勤結清、登記。退租前的水費結清差額由承租人負擔（specs/03 §6.4）。</p>', { submit: '儲存', onSubmit: function (f) { s.utils = { water: optInt(f.w, '水費'), elec: optInt(f.e, '電費'), gas: optInt(f.g, '瓦斯費') }; return utilPending(s).length ? '已儲存，尚有 ' + utilPending(s).length + ' 項待結清' : '水電瓦斯都已結清，可以做完整版簽名'; } }); return; }
     if (fl === 'sign' && (!s.draftOk || utilPending(s).length)) { toast(!s.draftOk ? '要先完成「承租人確認初稿」' : '水電瓦斯仍待結清，完整版要有實際金額（D-050）'); return; }
-    modal(lab[fl], dateFld('date', '日期', TODAY) + (fl === 'moved' ? '<p class="muted small">確認方式（戶籍謄本或戶口名簿影本）待定（S-12）</p>' : ''), { submit: '登錄', onSubmit: function (f) { var d = needDate(f.date, '日期'); s[{ draft: 'draftOk', sign: 'signedDate', passbook: 'passbookDate', moved: 'movedOutDate' }[fl]] = d; return '已登錄' + lab[fl]; } });
+    if (fl === 'res') { modal('戶籍狀態', fld('設籍狀態', sel('rs', ['未於本址設籍', '已遷出', '尚未遷出'], RES_LABEL[s.resStatus] || '尚未遷出')) + '<div class="row2">' + dateFld('date', '遷出確認日（承租人告知日）', s.movedOutDate || TODAY) + fld('告知方式', sel('via', ['口頭', 'LINE'], s.movedVia || '口頭')) + '</div><p class="muted small">承租人口頭或 LINE 告知遷出就算數，不收書面佐證；選「已遷出」才需要日期與告知方式（D-168）。改過的狀態會留紀錄。</p>', { submit: '登錄', onSubmit: function (f) { var st = resCode(f.rs); return setRes(s, st, st === 'moved' ? needDate(f.date, '遷出確認日') : null, f.via); } }); return; }
+    modal(lab[fl], dateFld('date', '日期', TODAY), { submit: '登錄', onSubmit: function (f) { var d = needDate(f.date, '日期'); s[{ draft: 'draftOk', sign: 'signedDate', passbook: 'passbookDate' }[fl]] = d; return '已登錄' + lab[fl]; } });
     return;
   }
   openAction(act, ds);
