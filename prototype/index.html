@@ -1652,9 +1652,9 @@ function pUnit(id) {
     var exp = diff(res.holdUntil, TODAY) > 0;
     summary = '<section class="card pad col o-sum" aria-label="訂金"><h2 class="h2s serif">已收訂，保留中</h2><div class="kv"><span>付訂人</span><span>' + esc(res.payer) + '｜' + esc(res.phone) + '</span></div><div class="kv"><span>訂金</span><span class="num">' + money(res.amount) + '（收訂日 ' + roc(res.date) + '）</span></div><div class="kv"><span>保留期限</span><span class="num">' + roc(res.holdUntil) + (exp ? ' <span class="pill p-amber">已過期 ' + diff(res.holdUntil, TODAY) + ' 天</span>' : '') + '</span></div></section>';
   } else if (u.status === '招租中') {
-    summary = '<div class="facts o-sum"><div class="fact"><span>招租定價</span><b>' + money(u.listPrice) + '</b></div><div class="fact"><span>招租起日</span><b>' + roc(u.statusSince) + '</b></div></div>';
+    summary = '<div class="facts o-sum"><div class="fact"><span>招租定價</span><b>' + money(u.listPrice) + '</b><button type="button" class="btn outline" data-act="listprice" data-u="' + u.id + '">修改</button></div><div class="fact"><span>招租起日</span><b>' + roc(u.statusSince) + '</b></div></div>';
   } else if (u.status === '整備中') {
-    summary = '<div class="facts o-sum"><div class="fact"><span>整備起日</span><b>' + roc(u.statusSince) + '</b></div><div class="fact"><span>招租定價</span><b>' + money(u.listPrice) + '</b></div></div>';
+    summary = '<div class="facts o-sum"><div class="fact"><span>整備起日</span><b>' + roc(u.statusSince) + '</b></div><div class="fact"><span>招租定價</span><b>' + money(u.listPrice) + '</b><button type="button" class="btn outline" data-act="listprice" data-u="' + u.id + '">修改</button></div></div>';
   } else if (u.status === '特殊狀況') {
     summary = '<section class="card pad o-sum"><div class="muted small">特殊狀況說明</div><div>' + esc(u.note) + '</div><div class="muted small" style="margin-top:6px">自 ' + roc(u.statusSince) + ' 起</div></section>';
   }
@@ -2340,6 +2340,11 @@ function openAction(act, ds) {
     modal((ds.to === '整備中' ? '恢復整備' : '恢復招租') + '｜' + uName(u.id), '<p class="muted small">特殊狀況說明：' + esc(u.note) + '</p>' + fld('恢復說明（必填）', '<textarea name="note" placeholder="例：訴訟結案、不再自用"></textarea>', '轉入、恢復特殊狀況都要寫原因（D-142）'), { submit: '確定', onSubmit: function (f) { var n = needText(f.note, '恢復說明'); setStatus(u, ds.to, TODAY, n); return '已轉為' + ds.to; } });
   } else if (act === 'back-prep') {
     modal('退回整備｜' + uName(u.id), dateFld('date', '退回日', TODAY) + fld('原因', '<textarea name="note" placeholder="例：上架後發現漏水，需先修繕"></textarea>') + '<p class="muted small">招租天數暫停、整備天數續算；修好後再「回報可招租」（D-142）。</p>', { submit: '確定', onSubmit: function (f) { var d = needDate(f.date, '退回日'); if (d < u.statusSince) throw '退回日不能早於招租起日 ' + roc(u.statusSince); setStatus(u, '整備中', d, String(f.note || '').trim()); return uName(u.id) + ' 已退回整備中'; } });
+  } else if (act === 'listprice') {
+    if (u.status !== '整備中' && u.status !== '招租中') throw '只有整備中、招租中的單元可以修改招租定價（D-207）';
+    modal('招租定價｜' + uName(u.id), fld('招租定價（月租金）', inp('price', u.listPrice, 'inputmode="numeric"'), '目前 ' + money(u.listPrice) + '。只改這個數字，不留改價歷史；租金以簽約的合約月租金為準（D-207）'), { submit: '儲存', onSubmit: function (f) {
+      var n = needInt(f.price, '招租定價'); u.listPrice = n; return '招租定價已改為 ' + money(n);
+    } });
   } else if (act === 'reserve') {
     modal('收訂｜' + uName(u.id), fld('付訂人稱呼', inp('payer', '', 'placeholder="例：王小姐"')) + fld('電話', inp('phone', '', 'inputmode="tel" placeholder="試用版請勿填真實號碼"')) + fld('訂金金額', inp('amt', Math.round(u.listPrice / 2), 'inputmode="numeric"'), '預設＝招租定價 ÷ 2，四捨五入到元（CR-45）') + '<div class="row2">' + dateFld('date', '收訂日', TODAY) + dateFld('hold', '保留期限', addDays(TODAY, 7)) + '</div>', { submit: '收訂', onSubmit: function (f) {
       var p = needText(f.payer, '付訂人稱呼'); var ph = needText(f.phone, '電話'); var a = needInt(f.amt, '訂金金額'); var d = needDate(f.date, '收訂日'); var h = needDate(f.hold, '保留期限'); if (h < d) throw '保留期限不能早於收訂日';
