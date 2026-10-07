@@ -68,7 +68,7 @@
 <body>
 <div class="page">
   <h1>PRM System 規格確認 — 待確認問題單（可填寫）</h1>
-  <div class="meta">2026-10-07 更新（上次 4 題已收到回覆，謝謝；新增「同一間房屋兩組房客，一組退租後空著的那段水費誰付」）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
+  <div class="meta">2026-10-08 更新（上一題已確認，謝謝；新增「退租後實際水電費超過預扣金額怎麼處理」）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
 
   <div class="toolbar">
     <label>填寫人：<input id="writer" data-save="writer" placeholder="請輸入姓名"></label>
@@ -76,15 +76,14 @@
     <button class="secondary" onclick="exportAnswers('download')">匯出回覆（下載檔案）</button>
     <span class="hint">填寫內容會自動暫存在這台裝置的瀏覽器裡，關閉再開不會消失。填完請按「複製全部回覆」，貼到 LINE 或 email 傳回給發單人（電腦上也可改用「匯出回覆」下載檔案）。</span>
   </div>
-  <div class="qcard" data-q="Q-059" data-title="同一間房屋兩組房客，一組退租後空著的那段水費誰付">
-    <div class="qhead"><span><span class="qid">Q-059</span><span class="qtitle">同一間房屋兩組房客，一組退租後空著的那段水費誰付</span></span><span class="assign">指派給：<input data-save="asg-Q-059" value="全員" readonly></span></div>
-    <div class="ctx">背景：有幾間房屋是同一間住兩組房客，整張水費帳單依比例拆給兩組（例：一組三成、一組七成）。上次回覆說：退租時拍水表，公司先結清當下度數，退租那組按比例從保證金扣；退租戶空置期間的分攤金額由公司吸收。系統原本的寫法是：一組空著的天數，由還住著的那一組付整張帳單。兩種做法要選一種：</div>
+  <div class="qcard" data-q="Q-060" data-title="退租後實際水電費超過預扣金額怎麼處理">
+    <div class="qhead"><span><span class="qid">Q-060</span><span class="qtitle">退租後實際水電費超過預扣金額怎麼處理</span></span><span class="assign">指派給：<input data-save="asg-Q-060" value="全員" readonly></span></div>
+    <div class="ctx">背景：房客退租時，公司可以先從押金預扣一筆水電費，等水電帳單來了按實際金額結算，剩下的退還房客。</div>
     <ol>
-      <li>一組退租後、下一組房客入住前，空著那組比例的水費，由公司付，還是由還住著的那一組付？</li>
-      <li>如果一組退租後整整一期都沒有新房客，答案和第 1 小題一樣嗎？</li>
-      <li>退租時拍水表結清，度數乘的單價用哪一個？（例：上一期帳單的每度平均單價）</li>
+      <li>帳單來了，實際水電費超過預扣的金額時，超出的部分現在怎麼處理？（例：再向房客收、由公司吸收）</li>
+      <li>如果是向房客收，現在用什麼方式通知和收款？（例：電話或 LINE 通知後轉帳）</li>
     </ol>
-    <textarea class="ans" data-save="ans-Q-059" placeholder="回覆…"></textarea>
+    <textarea class="ans" data-save="ans-Q-060" placeholder="回覆…"></textarea>
   </div>
 
   <div class="savenote" id="savenote"></div>
