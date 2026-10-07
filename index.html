@@ -68,7 +68,7 @@
 <body>
 <div class="page">
   <h1>PRM System 規格確認 — 待確認問題單（可填寫）</h1>
-  <div class="meta">2026-10-07 更新（新增「退租時水電帳單還沒到怎麼扣」；2026-10-06 新增「洗衣收入在擴充樓層後怎麼分」；Q-053、Q-055 已回覆移出；「公共水電分攤與退租結算的現行做法」只剩第 1 小題）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
+  <div class="meta">2026-10-07 更新（上次 4 題已收到回覆，謝謝；新增「同一間房屋兩組房客，一組退租後空著的那段水費誰付」）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
 
   <div class="toolbar">
     <label>填寫人：<input id="writer" data-save="writer" placeholder="請輸入姓名"></label>
@@ -76,40 +76,15 @@
     <button class="secondary" onclick="exportAnswers('download')">匯出回覆（下載檔案）</button>
     <span class="hint">填寫內容會自動暫存在這台裝置的瀏覽器裡，關閉再開不會消失。填完請按「複製全部回覆」，貼到 LINE 或 email 傳回給發單人（電腦上也可改用「匯出回覆」下載檔案）。</span>
   </div>
-  <div class="qcard" data-q="Q-054" data-title="請款單的「支存帳號」欄">
-    <div class="qhead"><span><span class="qid">Q-054</span><span class="qtitle">請款單的「支存帳號」欄</span></span><span class="assign">指派給：<input data-save="asg-Q-054" value="會計" readonly></span></div>
-    <div class="ctx">背景：系統要產出對外的租金／管理費請款單。請款單上有「支存帳號」欄，內容有的寫銀行分行與金額，有的寫 EDI 編號。</div>
+  <div class="qcard" data-q="Q-059" data-title="同一間房屋兩組房客，一組退租後空著的那段水費誰付">
+    <div class="qhead"><span><span class="qid">Q-059</span><span class="qtitle">同一間房屋兩組房客，一組退租後空著的那段水費誰付</span></span><span class="assign">指派給：<input data-save="asg-Q-059" value="全員" readonly></span></div>
+    <div class="ctx">背景：有幾間房屋是同一間住兩組房客，整張水費帳單依比例拆給兩組（例：一組三成、一組七成）。上次回覆說：退租時拍水表，公司先結清當下度數，退租那組按比例從保證金扣；退租戶空置期間的分攤金額由公司吸收。系統原本的寫法是：一組空著的天數，由還住著的那一組付整張帳單。兩種做法要選一種：</div>
     <ol>
-      <li>「支存帳號」欄記的是公司付款用的支票存款帳號（付款方），還是房東的收款帳號？欄內的 EDI 編號是每次付款時產生的交易序號嗎？</li>
+      <li>一組退租後、下一組房客入住前，空著那組比例的水費，由公司付，還是由還住著的那一組付？</li>
+      <li>如果一組退租後整整一期都沒有新房客，答案和第 1 小題一樣嗎？</li>
+      <li>退租時拍水表結清，度數乘的單價用哪一個？（例：上一期帳單的每度平均單價）</li>
     </ol>
-    <textarea class="ans" data-save="ans-Q-054" placeholder="回覆…"></textarea>
-  </div>
-  <div class="qcard" data-q="Q-056" data-title="公共水電分攤與退租結算的現行做法">
-    <div class="qhead"><span><span class="qid">Q-056</span><span class="qtitle">公共水電分攤與退租結算的現行做法</span></span><span class="assign">指派給：<input data-save="asg-Q-056" value="全員" readonly></span></div>
-    <div class="ctx">背景：系統要自動計算公共水電分攤，下列一點需要確認現行做法（第 2～5 小題已收到回覆，謝謝）。</div>
-    <ol>
-      <li>空房、豁免房的公共水電份額現在由誰付？有一間房設為不分擔公電（豁免），為什麼不分擔？</li>
-    </ol>
-    <textarea class="ans" data-save="ans-Q-056" placeholder="回覆…"></textarea>
-  </div>
-  <div class="qcard" data-q="Q-057" data-title="洗衣收入在擴充樓層後怎麼分">
-    <div class="qhead"><span><span class="qid">Q-057</span><span class="qtitle">洗衣收入在擴充樓層後怎麼分</span></span><span class="assign">指派給：<input data-save="asg-Q-057" value="全員" readonly></span></div>
-    <div class="ctx">背景：有付費洗衣機、烘衣機的那個案場，目前收到的錢平分給 4 樓、5 樓兩張公電帳單，先抵公電再均分給房客。如果之後擴充 3 樓的租約，3 樓也裝洗衣機、烘衣機：</div>
-    <ol>
-      <li>取出來的錢要平分給 3、4、5 樓三張公電帳單，還是每層樓機器的錢只抵該層樓的公電？</li>
-      <li>如果要分層樓計算，取錢時能分開數每層樓機器的錢嗎？</li>
-    </ol>
-    <textarea class="ans" data-save="ans-Q-057" placeholder="回覆…"></textarea>
-  </div>
-
-  <div class="qcard" data-q="Q-058" data-title="退租時水電帳單還沒到怎麼扣">
-    <div class="qhead"><span><span class="qid">Q-058</span><span class="qtitle">退租時水電帳單還沒到怎麼扣</span></span><span class="assign">指派給：<input data-save="asg-Q-058" value="全員" readonly></span></div>
-    <div class="ctx">背景：房客退租點交時，當期水電帳單通常還沒到。系統要決定退租時先扣多少：</div>
-    <ol>
-      <li>同一間房屋由兩組房客按比例分攤整張水費帳單的案場，其中一組退租時水費帳單還沒到，現在怎麼處理？（例：用上一期帳單按比例和天數估算後從押金扣、先預扣一筆定額等帳單到再退差額、等帳單到再向房客收）</li>
-      <li>新案場的第一期、新增的電表或水表、或上一期整間空著，沒有上一期帳單可以參考時，退租的水電費現在怎麼定金額？</li>
-    </ol>
-    <textarea class="ans" data-save="ans-Q-058" placeholder="回覆…"></textarea>
+    <textarea class="ans" data-save="ans-Q-059" placeholder="回覆…"></textarea>
   </div>
 
   <div class="savenote" id="savenote"></div>
