@@ -221,6 +221,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 .todo-row:last-child{border-bottom:none}
 .todo-row .lmain{min-width:200px}
 .todo-row .acts{display:flex;gap:8px;flex-wrap:wrap}
+.mscroll{overflow-y:auto;overscroll-behavior:contain}
 .rule{font-size:14px;color:var(--text2);background:var(--gray-s);border-radius:10px;padding:10px 14px;margin-bottom:16px;line-height:1.6}
 
 /* 分頁籤 */
@@ -246,6 +247,10 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 .msel .mlist a[aria-checked=true] i{background:var(--accent);border-color:var(--accent);color:#fff}
 @media (max-width:767px){.msel{flex:1 1 100%}.msel>summary{max-width:none}.msel .mlist{right:0}}
 .cfsearch{margin-left:auto}
+.mfbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.mfbar .sbox{width:260px}.mfbar .sbox>svg{top:10px;left:13px}.mfbar .sbox input{height:40px;border-radius:10px;font-size:14px;padding-left:40px}
+.mfbar select{height:40px;border-radius:10px;border:1px solid #DCD2C3;background:var(--card);font-size:14px;padding:0 10px;max-width:220px}
+.mfbar .check{min-height:40px}
 .cfsearch .sbox{width:340px}.cfsearch .sbox>svg{top:10px;left:13px}.cfsearch .sbox input{height:40px;border-radius:10px;font-size:14px;padding-left:40px}
 .cscroll{max-height:700px;overflow:auto}   /* 約 10 筆：表頭 36px＋每列約 66px（D-149），容器內捲動 */
 .cscroll thead th{position:sticky;top:0;background:var(--card);z-index:1}
@@ -372,7 +377,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 'use strict';
 /* ================= 基本工具 ================= */
 var TODAY = '2026-10-05';
-var KEY = 'prm-prototype-v24';
+var KEY = 'prm-prototype-v26';
 var S = null;
 var $ = function (sel) { return document.querySelector(sel); };
 
@@ -630,6 +635,11 @@ function seed() {
   /* 人為損壞的維修收費同步列應收（D-130：收費進損益 L0 一次性收入，維修以毛額計） */
   rec(leaseOf('c2', '9號'), '維修收費', '2026-09', '2026-09-19', 900, 900);
 
+  /* D-223 示範：完工但還沒登錄正航、公區進行中（掛案場與案件）、作廢的進行中紀錄 */
+  st.maint.push({ id: 'm9', unitId: U('c1', 'B-7-2').id, item: '陽台排水孔堵塞', reportDate: '2026-10-01', doneDate: '2026-10-03', cost: 1200, charge: 0, resp: '非人為（公司負擔）', erp: '' });
+  st.maint.push({ id: 'm10', site: '河濱新城', caseId: 'c6', item: '公區走道天花板漏水', reportDate: '2026-10-04', doneDate: null, cost: 0, charge: 0, resp: '', erp: '' });
+  st.maint.push({ id: 'm12', unitId: U('c6', 'E-3-1').id, item: '浴室排水不順', reportDate: '2026-09-25', doneDate: '2026-09-27', cost: 1800, charge: 0, resp: '非人為（公司負擔）', erp: 'EX-1150927' });
+  st.maint.push({ id: 'm11', unitId: U('c3', '3號房').id, item: '房間燈具不亮（重複建立）', reportDate: '2026-10-02', doneDate: null, cost: 0, charge: 0, resp: '', erp: '', voided: { date: '2026-10-03', by: '小林', reason: '重複建立，已併入另一筆' } });
   st.maint.push({ id: 'm8', cat: '發文郵資', unitId: b72.unitId, item: '存證信函 115-存-009 郵資', reportDate: '2026-09-09', doneDate: '2026-09-09', cost: 470, charge: 0, resp: '', erp: 'EX-1150921', payer: '小林', noticeNo: '115-存-009' });
   st.company = seedCompany(); st.companyLog = []; st.lifeVers = [lifeV1()]; st.mgmtVers = mgmtSeed(st); st.mgmtLog = [];
   /* 收款紀錄：已沖的應收依應繳日歸成一筆收款，並記下沖了哪些項目與月份（單戶頁「收款記錄」，D-154） */
@@ -905,7 +915,40 @@ function inRemind(l) { var d = diff(TODAY, l.end); return !!l.active && d >= 0 &
 function needRemind(v) { var t = String(v == null ? '' : v).trim(); if (!/^\d+$/.test(t) || +t < 1 || +t > 365) throw '到期提醒天數要填 1～365 的整數'; return +t; }
 function expiringItems() { return S.leases.filter(function (l) { return inRemind(l) && l.renew === '待詢問'; }).sort(function (a, b) { return a.end < b.end ? -1 : 1; }); }
 function isRepair(m) { return (m.cat || '維修') === '維修'; }   /* 費用類別「維修」（D-198；原名修繕） */
-function maintItems() { return S.maint.filter(function (m) { return isRepair(m) && !m.doneDate; }).sort(function (a, b) { return a.reportDate < b.reportDate ? -1 : 1; }); }
+function maintItems() { return S.maint.filter(function (m) { return isRepair(m) && !m.doneDate && !m.voided; }).sort(function (a, b) { return a.reportDate < b.reportDate ? -1 : 1; }); }
+/* 維修與費用頁（D-223）：公區紀錄＝有案場、沒有單元；狀態由資料推出（未完工／未登錄正航／已完工），作廢另算 */
+var MF = { q: '', site: '', kase: '', pub: false, voided: false };   /* 篩選條件，只存在記憶體 */
+function mSite(m) { return m.unitId ? unitSite(U(m.unitId)) : m.site; }
+function mCaseIds(m) { return m.unitId ? [U(m.unitId).caseId] : (m.splits && m.splits.length ? m.splits.map(function (x) { return x.caseId; }) : [m.caseId]); }
+/* 紀錄歸到某案件的金額（損益用）：單元紀錄取所屬案件；公區紀錄取拆分明細；作廢不計 */
+function mCaseAmt(m, caseId) {
+  if (m.voided) return 0;
+  if (m.unitId) return U(m.unitId).caseId === caseId ? m.cost : 0;
+  return sum((m.splits || []).filter(function (x) { return x.caseId === caseId; }), function (x) { return x.amount; });
+}
+function mName(m) { return m.unitId ? uNameBar(m.unitId) : m.site + '｜公區'; }
+function maintState(m) { return !m.doneDate ? '未完工' : m.erp ? '已完工' : '未登錄正航'; }
+function mPass(m) {
+  if (MF.pub && m.unitId) return false;
+  if (MF.site && mSite(m) !== MF.site) return false;
+  if (MF.kase && mCaseIds(m).indexOf(MF.kase) < 0) return false;
+  if (MF.q.trim() && !(m.unitId && searchUnits(MF.q).some(function (u) { return u.id === m.unitId; }))) return false;
+  return true;
+}
+/* 總表：未完工（報修日舊到新）→ 未登錄正航（完工日舊到新）→ 已完工（完工日新到舊）；開「只看作廢」時只列作廢的維修 */
+function maintView() {
+  var all = S.maint.filter(mPass); var rep = all.filter(isRepair); var oth = all.filter(function (m) { return !isRepair(m); });
+  if (MF.voided) return { repairs: rep.filter(function (m) { return m.voided; }).sort(function (a, b) { return a.voided.date < b.voided.date ? 1 : -1; }), others: [] };
+  var rank = { '未完工': 0, '未登錄正航': 1, '已完工': 2 };
+  rep = rep.filter(function (m) { return !m.voided; }).sort(function (a, b) {
+    var sa = maintState(a), sb = maintState(b); if (sa !== sb) return rank[sa] - rank[sb];
+    if (sa === '未完工') return a.reportDate < b.reportDate ? -1 : a.reportDate > b.reportDate ? 1 : 0;
+    if (sa === '未登錄正航') return a.doneDate < b.doneDate ? -1 : a.doneDate > b.doneDate ? 1 : 0;
+    return a.doneDate < b.doneDate ? 1 : a.doneDate > b.doneDate ? -1 : 0;
+  });
+  oth = oth.filter(function (m) { return !m.voided; }).sort(function (a, b) { return a.doneDate < b.doneDate ? 1 : -1; });
+  return { repairs: rep, others: oth };
+}
 function masterItems() { var lim = addMonths(TODAY, 6); return S.contracts.filter(function (k) { return k.end >= TODAY && k.end <= lim; }); }
 function photoItems() {
   var a = S.leases.filter(function (l) { return l.active && l.start <= TODAY && !l.docs.photoIn; }).map(function (l) { return { l: l, kind: '起租', date: l.start }; });
@@ -937,7 +980,7 @@ var CARD_DEFS = [
     head: function (it) { return '已進入提醒期、續約意向待詢問｜最近：' + uName(it[0].unitId) + ' ' + roc(it[0].end); },
     rule: '租約迄日進入該約的提醒期（預設迄日前 45 天，每份租約可在單戶頁「簽約資料」改，D-205）、續約意向仍是「待詢問」（Q-015）。登錄續約意向後自清單移除；意向為「續約」的到單戶頁「建立續約合約」（D-082）。' },
   { key: 'maint', sev: 'gray', title: '維修未結案', unit: '筆', items: maintItems,
-    head: function (it) { var x = it[0]; return '最久：' + uNameBar(x.unitId) + '｜' + x.item + '｜報修日 ' + roc(x.reportDate); },
+    head: function (it) { var x = it[0]; return '最久：' + mName(x) + '｜' + x.item + '｜報修日 ' + roc(x.reportDate); },
     rule: '有報修日、尚無完工日的維修紀錄（specs/06 §2）。完工時要填成本、責任歸屬與向房客收費。' },
   { key: 'master', sev: 'gray', title: '上層合約將到期', unit: '份', items: masterItems,
     head: function (it) { return C(it[0].caseId).name + '｜' + it[0].name + ' 迄日 ' + roc(it[0].end); },
@@ -1034,9 +1077,9 @@ function pHome() {
     frow('<span class="muted">' + S.cases.length + ' 個案件｜提醒期內到期租約 ' + exp30 + ' 份</span>')]);
   /* 維修 */
   var mi = maintItems(); var old = mi[0];
-  var doneM = S.maint.filter(function (m) { return isRepair(m) && m.doneDate && m.doneDate.slice(0, 7) === TODAY.slice(0, 7); }).length;
+  var doneM = S.maint.filter(function (m) { return isRepair(m) && !m.voided && m.doneDate && m.doneDate.slice(0, 7) === TODAY.slice(0, 7); }).length;
   var cMaint = fcard('#/maint', 'wrench', '維修', mi.length, '筆未結案', [
-    frow(old ? '<span class="pill p-gray">最久</span> ' + esc(uNameBar(old.unitId) + '｜' + old.item) + '｜報修日 ' + roc(old.reportDate) : '<span class="muted">沒有未結案的維修</span>'),
+    frow(old ? '<span class="pill p-gray">最久</span> ' + esc(mName(old) + '｜' + old.item) + '｜報修日 ' + roc(old.reportDate) : '<span class="muted">沒有未結案的維修</span>'),
     frow('<span class="muted">10 月已完工 ' + doneM + ' 筆</span>')]);
   /* 帳務 */
   var oct = S.receivables.filter(function (r) { return r.month === '2026-10' && ['租約押金', '裝潢保證金', '押金差額補收'].indexOf(r.item) < 0; });
@@ -1112,14 +1155,22 @@ function noticeRow(n) {
     (n.status === '已確認' ? '<span class="pill p-ok">已確認</span>' : isAdmin() ? '<button class="btn sm primary" data-act="notice-ok" data-id="' + n.id + '">主管確認</button>' : '<span class="pill p-amber">待主管確認</span>') + '</div></div>';
 }
 function payableRow(p) { return '<div class="todo-row"><span class="lmain"><b>' + esc(p.payee) + '｜' + esc(p.period) + '</b><small>' + C(p.caseId).name + '｜' + money(p.amount) + '｜付款期限 ' + roc(p.dueDate) + (p.paidDate ? '｜已付 ' + roc(p.paidDate) : '') + '</small></span>' + (p.paidDate ? '<span class="pill p-ok">已付款</span>' : '<div class="acts"><button class="btn sm outline" data-act="payable-paid" data-id="' + p.id + '">登錄已付款</button></div>') + '</div>'; }
+/* 其他費用（發文郵資、其他）：整列點擊開維修資料視窗；正航單號空白的列用按鈕「登錄正航」提示（D-223、D-226） */
 function expenseRow(m) {
-  return '<div class="todo-row click" data-go="#/unit/' + m.unitId + '"><span class="lmain"><b><a class="rowlink" href="#/unit/' + m.unitId + '">' + uName(m.unitId) + '</a>｜' + esc(m.item) + ' <span class="tag">' + esc(m.cat) + '</span></b><small>' + roc(m.doneDate) + '｜' + money(m.cost) + (m.payer ? '｜請款人 ' + esc(m.payer) : '') + (m.erp ? '｜正航 ' + esc(m.erp) : '') + (m.noticeNo ? '｜文號 ' + esc(m.noticeNo) : '') + '｜不向房客收</small></span></div>';
+  return '<div class="todo-row click" data-act="maint-view" data-id="' + m.id + '"><span class="lmain"><b>' + esc(mName(m)) + '｜' + esc(m.item) + ' <span class="tag">' + esc(m.cat) + '</span></b><small>' + roc(m.doneDate) + '｜' + money(m.cost) + (m.payer ? '｜請款人 ' + esc(m.payer) : '') + (m.erp ? '｜正航 ' + esc(m.erp) : '') + (m.noticeNo ? '｜文號 ' + esc(m.noticeNo) : '') + (m.note ? '｜' + esc(m.note) : '') + '｜不向房客收</small></span>' +
+    (m.erp ? '' : '<div class="acts"><button class="btn sm outline" data-act="maint-erp" data-id="' + m.id + '">登錄正航</button></div>') + '</div>';
 }
-/* 整列點擊進單戶頁；未結案只顯示報修日（放在「登錄完工」左側），不顯示已過天數 */
+/* 整列點擊開「維修資料」視窗（D-223，取代 D-134 第 4 點的進單戶頁）；未完工只顯示報修日（放在「登錄完工」左側），不顯示已過天數；
+   狀態用按鈕文字表示：未完工＝登錄完工、未登錄正航＝登錄正航、已完工＝「已完工」字樣；不設狀態標籤 */
 function maintRow(m) {
-  return '<div class="todo-row click" data-go="#/unit/' + m.unitId + '"><span class="lmain"><b><a class="rowlink" href="#/unit/' + m.unitId + '">' + uNameBar(m.unitId) + '</a>｜' + esc(m.item) + '</b>' +
-    (m.doneDate ? '<small>報修日 ' + roc(m.reportDate) + '｜完工日 ' + roc(m.doneDate) + '｜成本 ' + money(m.cost) + (m.charge ? '｜向房客收 ' + money(m.charge) : '') + '｜' + esc(m.resp) + (m.erp ? '｜正航 ' + esc(m.erp) : '') + '</small>' : '') + '</span>' +
-    (m.doneDate ? '<span class="pill p-ok">已完工</span>' : '<div class="acts" style="align-items:center"><span class="age">報修日 ' + roc(m.reportDate) + '</span><button class="btn sm outline" data-act="maint-done" data-id="' + m.id + '">登錄完工</button></div>') + '</div>';
+  var sm = maintState(m);
+  return '<div class="todo-row click" data-act="maint-view" data-id="' + m.id + '"><span class="lmain"><b>' + esc(mName(m)) + '｜' + esc(m.item) + '</b>' +
+    (m.voided ? '<small>報修日 ' + roc(m.reportDate) + '｜作廢 ' + roc(m.voided.date) + '｜' + esc(m.voided.by) + '｜原因：' + esc(m.voided.reason) + '</small>'
+      : m.doneDate ? '<small>報修日 ' + roc(m.reportDate) + '｜完工日 ' + roc(m.doneDate) + '｜成本 ' + money(m.cost) + (m.charge ? '｜向房客收 ' + money(m.charge) : '') + '｜' + esc(m.resp) + (m.erp ? '｜正航 ' + esc(m.erp) : '') + '</small>' : '') + (m.note && isRepair(m) ? '<small>備註：' + esc(m.note) + '</small>' : '') + '</span>' +
+    (m.voided ? '<span class="pill p-gray">已作廢</span>'
+      : sm === '未完工' ? '<div class="acts" style="align-items:center"><span class="age">報修日 ' + roc(m.reportDate) + '</span><button class="btn sm outline" data-act="maint-done" data-id="' + m.id + '">登錄完工</button></div>'
+      : sm === '未登錄正航' ? '<div class="acts"><button class="btn sm outline" data-act="maint-erp" data-id="' + m.id + '">登錄正航</button></div>'
+      : '<span class="pill p-ok">已完工</span>') + '</div>';
 }
 
 /* ================= 案件（＝一份上層合約，D-109）與檢視群組（D-111） ================= */
@@ -1258,7 +1309,7 @@ function unitFlags(u, l) {
   if (od && od.months) flags.push('<span class="pill p-amber">逾期 ' + od.months + ' 期</span>');
   if (l && inRemind(l)) flags.push('<span class="pill p-gray">' + remindDays(l) + ' 天內到期</span>');
   if (l && missingDocs(l).length) flags.push('<span class="pill p-gray">缺件 ' + missingDocs(l).length + '</span>');
-  if (S.maint.some(function (m) { return m.unitId === u.id && !m.doneDate; })) flags.push('<span class="pill p-gray">維修中</span>');
+  if (S.maint.some(function (m) { return m.unitId === u.id && !m.doneDate && !m.voided; })) flags.push('<span class="pill p-gray">維修中</span>');
   if (S.settlements.some(function (x) { return x.unitId === u.id && !x.refundedDate; })) flags.push('<span class="pill p-gray">退租結算中</span>');
   return flags;
 }
@@ -1558,12 +1609,16 @@ function otherRecords(u) {
     '<p class="muted small" style="margin-top:8px">最新 10 筆；收款見「收款記錄」、維修見「維修記錄」</p></section>';
 }
 /* 維修記錄：本單元歷任承租人的維修，新到舊，預設收合；標題標出處理中件數（D-154） */
-function unitRepairs(u) { return S.maint.filter(function (m) { return m.unitId === u.id && isRepair(m); }).sort(function (a, b) { return a.reportDate < b.reportDate ? 1 : -1; }); }
+function unitRepairs(u) { return S.maint.filter(function (m) { return m.unitId === u.id && isRepair(m) && !m.voided; }).sort(function (a, b) { return a.reportDate < b.reportDate ? 1 : -1; }); }
+/* 進行中的紀錄可完工、作廢；完工但沒有正航單號的可登錄正航；已完工（不能作廢，B-32）且已登錄的沒有按鈕（D-223） */
 function maintCard(u) {
   var ms = unitRepairs(u); var openN = ms.filter(function (m) { return !m.doneDate; }).length;
   return '<details class="card pad histbox o-maint"><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:32px"><h2 class="h2s serif" id="maint-h">維修記錄</h2><span style="display:flex;gap:8px;align-items:center">' + (openN ? '<span class="pill p-amber">處理中 ' + openN + ' 件</span>' : '') + ic('chev', 18) + '</span></summary>' +
     '<div style="margin-top:6px">' + (ms.length ? '<div class="recs">' + ms.map(function (m) {
-      return '<div class="rec"><span>' + esc(m.item) + '<br><span class="muted small">' + (m.doneDate ? '完工 ' + roc(m.doneDate) + (m.cost ? '｜成本 ' + money(m.cost) : '') + (m.charge ? '｜向房客收費 ' + money(m.charge) : '') + (m.resp ? '｜' + esc(m.resp) : '') : '處理中') + '</span></span><span class="muted num">報修 ' + roc(m.reportDate) + '</span></div>';
+      var sm = maintState(m);
+      var btns = sm === '未完工' ? '<button type="button" class="btn sm outline" data-act="maint-done" data-id="' + m.id + '">完工</button><button type="button" class="btn sm ghost" data-act="maint-void" data-id="' + m.id + '">作廢</button>'
+        : sm === '未登錄正航' ? '<button type="button" class="btn sm outline" data-act="maint-erp" data-id="' + m.id + '">登錄正航</button>' : '';
+      return '<div class="rec"><span>' + esc(m.item) + '<br><span class="muted small">' + (m.doneDate ? '完工 ' + roc(m.doneDate) + (m.cost ? '｜成本 ' + money(m.cost) : '') + (m.charge ? '｜向房客收費 ' + money(m.charge) : '') + (m.resp ? '｜' + esc(m.resp) : '') : '處理中') + '</span></span><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><span class="muted num">報修 ' + roc(m.reportDate) + '</span>' + btns + '</span></div>';
     }).join('') + '</div>' : '<p class="muted small">尚無維修記錄</p>') + '</div></details>';
 }
 /* 簽約資料（原「簽約要件」卡改名並擴充，D-154）：有缺漏時展開、齊全後收合；不列連帶保證人姓名電話、沒有珍愛生命條款（D-219） */
@@ -1928,13 +1983,25 @@ function pUtility(sid) {
 }
 
 /* ================= 維修、參考表、申報、報表、設定 ================= */
+/* 維修與費用頁（D-223）：工具列（搜尋、案場、上位契約、公區、只看作廢）＋總表＋其他費用；清單區塊 #mbody 可單獨重畫（輸入搜尋字時） */
+function mfCaseOpts() { return MF.site ? siteCases(MF.site) : S.cases; }
+function mfBar() {
+  return '<div class="mfbar"><div class="sbox">' + ic('search') + '<input type="search" id="mf-q" data-search="mf" autocomplete="off" aria-label="搜尋單元" placeholder="搜尋單元名稱" value="' + esc(MF.q) + '"></div>' +
+    '<select data-change="mf" data-k="site" aria-label="案場"><option value="">所有案場</option>' + siteList().map(function (s) { return '<option value="' + esc(s.name) + '"' + (MF.site === s.name ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('') + '</select>' +
+    '<select data-change="mf" data-k="kase" aria-label="上位契約"><option value="">所有上位契約</option>' + mfCaseOpts().map(function (c) { return '<option value="' + c.id + '"' + (MF.kase === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
+    '<label class="check"><input type="checkbox" data-change="mf" data-k="pub"' + (MF.pub ? ' checked' : '') + '><span>公區</span></label>' +
+    '<label class="check"><input type="checkbox" data-change="mf" data-k="voided"' + (MF.voided ? ' checked' : '') + '><span>只看作廢</span></label></div>';
+}
+function maintBody() {
+  var v = maintView(); var none = '<div class="empty">沒有符合的維修紀錄</div>';
+  if (MF.voided) return '<section id="mrep" class="sec"><h2 class="serif h2s">作廢的維修紀錄（' + v.repairs.length + ' 筆）</h2>' + (v.repairs.length ? '<div class="card mscroll" data-rows="10">' + v.repairs.map(maintRow).join('') + '</div>' : none) + '<p class="muted small" style="margin-top:6px">作廢的紀錄不計入損益與未結案件數，只保留查詢（D-108）。</p></section>';
+  return '<section id="mrep" class="sec"><h2 class="serif h2s">維修紀錄（' + v.repairs.length + ' 筆）</h2>' + (v.repairs.length ? '<div class="card mscroll" data-rows="10">' + v.repairs.map(maintRow).join('') + '</div>' : none) + '</section>' +
+    '<section id="moth" class="sec"><h2 class="serif h2s">其他費用（發文郵資、其他）</h2><p class="rule">掛在單元底下（或案場公區）、需要登記的零星支出，和維修放在同一個區塊（單元費用紀錄）。<b>是否登記由經辦人員決定</b>；存證費由郵局櫃台填寫，系統不自動計算、不向房客收。類別「其他」的成本可填負數（房東事後補回等，D-226）。這些費用不算進維修統計，只計入案件損益的總成本（D-091）。</p>' + (v.others.length ? '<div class="card mscroll" data-rows="5">' + v.others.map(expenseRow).join('') + '</div>' : '<div class="empty">尚無資料</div>') + '</section>';
+}
 function pMaint() {
-  var open = maintItems(); var exps = S.maint.filter(function (m) { return !isRepair(m); }).sort(function (a, b) { return a.doneDate < b.doneDate ? 1 : -1; }); var done = S.maint.filter(function (m) { return isRepair(m) && m.doneDate && m.doneDate.slice(0, 7) === TODAY.slice(0, 7); }).sort(function (a, b) { return a.doneDate < b.doneDate ? 1 : -1; });
-  return head('維修與費用', '未結案 ' + open.length + ' 筆', '<button type="button" class="btn ghost" data-act="depr">' + ic('book') + '賠償折舊參考表</button><button class="btn outline" data-act="quick" data-k="expense">' + ic('plus') + '登錄費用</button><button class="btn primary" data-act="quick" data-k="repair">' + ic('plus') + '新增報修</button>', null, true) +
-    '<p class="rule">完工時要填維修成本、責任歸屬與向房客收費（兩個金額分開記，差額才是公司實際負擔，specs/06 §2）。給排水、電氣等附屬設備現況點交、不向房客求償（D-031）。</p>' +
-    '<section class="sec"><h2 class="serif h2s">未結案</h2>' + (open.length ? '<div class="card">' + open.map(maintRow).join('') + '</div>' : '<div class="empty">沒有未結案的維修</div>') + '</section>' +
-    '<section class="sec"><h2 class="serif h2s">本月完工（' + (+TODAY.slice(5, 7)) + ' 月，' + done.length + ' 筆）</h2>' + (done.length ? '<div class="card">' + done.map(maintRow).join('') + '</div>' : '<div class="empty">本月尚無完工</div>') + '</section>' +
-    '<section class="sec"><h2 class="serif h2s">其他費用（發文郵資等）</h2><p class="rule">掛在單元底下、需要登記的零星支出，和維修放在同一個區塊（單元費用紀錄）。<b>是否登記由經辦人員決定</b>；存證費由郵局櫃台填寫，系統不自動計算、不向房客收。這些費用不算進維修統計，只計入案件損益的總成本（D-091）。</p>' + (exps.length ? '<div class="card">' + exps.slice(0, 8).map(expenseRow).join('') + '</div>' : '<div class="empty">尚無資料</div>') + '</section>';
+  return head('維修與費用', '未結案 ' + maintItems().length + ' 筆', '<button type="button" class="btn ghost" data-act="depr">' + ic('book') + '賠償折舊參考表</button><button class="btn outline" data-act="quick" data-k="expense">' + ic('plus') + '登錄費用</button><button class="btn primary" data-act="quick" data-k="repair">' + ic('plus') + '新增報修</button>', null, true) +
+    '<p class="rule">總表依序列出：未完工（報修日由舊到新）、未登錄正航、已完工；點一列看維修資料。完工時要填維修成本、責任歸屬與向房客收費（兩個金額分開記，差額才是公司實際負擔，specs/06 §2）；正航單號可以先空著，之後按「登錄正航」補登。給排水、電氣等附屬設備現況點交、不向房客求償（D-031）。</p>' +
+    mfBar() + '<div id="mbody">' + maintBody() + '</div>';
 }
 var LIFE = [['家電', '冷氣', 5], ['家電', '冰箱', 5], ['家電', '洗衣機', 5], ['家電', '熱水器', 5], ['家電', '電視', 3], ['家電', '烘衣機', 3], ['家電', '電磁爐／IH爐', 5], ['家電', '抽油煙機', 5], ['家電', '洗碗機', 5], ['家電', '烘碗機', 5], ['家電', '烤箱／蒸烤箱', 5], ['家電', '浴室暖風機', 5], ['家電', '電子鎖', 3], ['家電', '燈具', 5], ['家電', '微波爐', 5], ['家電', '淨水器', 5], ['家具', '床架', 5], ['家具', '床墊', 3], ['家具', '衣櫃', 5], ['家具', '書桌、餐桌', 5], ['家具', '椅子', 5], ['家具', '沙發', 3], ['家具', '電視櫃', 5], ['家具', '書櫃', 5], ['家具', '窗簾', 5], ['家具', '鞋櫃', 5]];
 /* 賠償折舊參考表：從維修頁、退租結算、案件設定以彈出視窗開啟，關閉後回到原畫面（可疊在退租視窗上，不清掉已填內容） */
@@ -2060,13 +2127,13 @@ function pReport(code) {
       var ONE = ['滯納金', '提前解約違約金', '行政手續費', '逾期未遷離—相當月租金', '逾期未遷離—違約金', '退租清潔費', '損壞賠償', '維修收費', '沒收訂金'];
       var one = sum(S.receivables.filter(function (r) { var l = S.leases.filter(function (x) { return x.id === r.leaseId; })[0]; return l && U(l.unitId).caseId === c.id && ONE.indexOf(r.item) >= 0 && r.month === '2026-09'; }), function (r) { return r.amount - (r.waived || 0); });
       var cost = sum(S.contracts.filter(function (k) { return k.caseId === c.id; }), curRent); var q = c.id === 'c2' ? 1 : 1;
-      var mt = sum(S.maint.filter(function (m) { return isRepair(m) && U(m.unitId).caseId === c.id && m.doneDate && m.doneDate.slice(0, 7) === '2026-09'; }), function (m) { return m.cost; });
-      var px = sum(S.maint.filter(function (m) { return !isRepair(m) && U(m.unitId).caseId === c.id && m.doneDate && m.doneDate.slice(0, 7) === '2026-09'; }), function (m) { return m.cost; });
+      var mt = sum(S.maint.filter(function (m) { return isRepair(m) && m.doneDate && m.doneDate.slice(0, 7) === '2026-09'; }), function (m) { return mCaseAmt(m, c.id); });
+      var px = sum(S.maint.filter(function (m) { return !isRepair(m) && m.doneDate && m.doneDate.slice(0, 7) === '2026-09'; }), function (m) { return mCaseAmt(m, c.id); });
       return [c.name, inc, one, cost * q, mt, px, inc + one - cost * q - mt - px];
     });
     var tr = [grpCur() ? '群組合計' : '全部合計', 0, 0, 0, 0, 0, 0]; rows.forEach(function (x) { for (var j = 1; j < 7; j++) tr[j] += x[j]; }); rows.push(tr);
     return head('案件逐月損益', '115/09｜試用版簡化算法', '', back) + groupBar() + '<p class="rule">正式版依 specs/02 的 L0～L7 分層（租金收入 → 租金成本 → 空間裝修攤提 → 家具攤提＋維修 → 管理費 → 人力 → 保險…）與成本分攤口徑計算；試用版只示意畫面，數字是假資料的粗算；一次性收入＝罰收與賠償（應收列帳、減免者不計），維修以毛額計（D-130）。一般人員看不到這份報表（D-073）。</p>' +
-      '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>案件</th><th class="r">租金收入</th><th class="r">一次性收入</th><th class="r">租金成本</th><th class="r">維修成本</th><th class="r">發文郵資</th><th class="r">收支差</th></tr></thead><tbody>' + rows.map(function (x, i) { return '<tr' + (i === rows.length - 1 ? ' style="background:var(--gray-s);font-weight:700"' : '') + '><td>' + x[0] + '</td><td class="r num">' + num(x[1]) + '</td><td class="r num">' + num(x[2]) + '</td><td class="r num">' + num(x[3]) + '</td><td class="r num">' + num(x[4]) + '</td><td class="r num">' + num(x[5]) + '</td><td class="r num"><b style="color:' + (x[6] < 0 ? 'var(--red)' : 'inherit') + '">' + num(x[6]) + '</b></td></tr>'; }).join('') + '</tbody></table></div><p class="muted small" style="padding:8px 12px">發文郵資只計入案件層總成本，不分到房間；只含有登記的部分（D-091）。</p></section>';
+      '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>案件</th><th class="r">租金收入</th><th class="r">一次性收入</th><th class="r">租金成本</th><th class="r">維修成本</th><th class="r">發文郵資與其他</th><th class="r">收支差</th></tr></thead><tbody>' + rows.map(function (x, i) { return '<tr' + (i === rows.length - 1 ? ' style="background:var(--gray-s);font-weight:700"' : '') + '><td>' + x[0] + '</td><td class="r num">' + num(x[1]) + '</td><td class="r num">' + num(x[2]) + '</td><td class="r num">' + num(x[3]) + '</td><td class="r num">' + num(x[4]) + '</td><td class="r num">' + num(x[5]) + '</td><td class="r num"><b style="color:' + (x[6] < 0 ? 'var(--red)' : 'inherit') + '">' + num(x[6]) + '</b></td></tr>'; }).join('') + '</tbody></table></div><p class="muted small" style="padding:8px 12px">發文郵資只計入案件層總成本，不分到房間；只含有登記的部分（D-091）。</p></section>';
   }
   if (code === 'RP-15') return head('對外租金／管理費請款單', '房東端應付', '', back) + '<div class="card">' + S.payables.slice().sort(function (a, b) { return a.dueDate < b.dueDate ? 1 : -1; }).map(payableRow).join('') + '</div>';
   if (code === 'RP-16') {
@@ -2226,7 +2293,9 @@ function resRow(u, href) { var l = activeLease(u.id); return '<a class="sres" hr
 function resBtn(u, act, id) { var l = activeLease(u.id); return '<button type="button" class="sres" style="width:100%;border:none;background:none;text-align:left;cursor:pointer" data-act="' + act + '" data-id="' + id + '" data-u="' + u.id + '"><span class="lmain"><b>' + uName(u.id) + '</b><small>' + (l ? esc(l.tenant) : u.type) + '</small></span>' + chip(u.status) + '</button>'; }
 function searchPool(input) { return input && input.getAttribute && input.getAttribute('data-scope') === 'cf' ? cfList(cfCur()).map(function (x) { return x.u; }) : null; }
 function renderSearch(input) {
-  var mode = input.getAttribute('data-search'); var q = input.value; var pool = searchPool(input); var rs = searchUnits(q, pool);
+  var mode = input.getAttribute('data-search'); var q = input.value;
+  if (mode === 'mf') { MF.q = q; $('#mbody').innerHTML = maintBody(); fitMaint(); return; }   /* 維修頁的搜尋只篩該頁清單，不跳單戶頁（D-223） */
+  var pool = searchPool(input); var rs = searchUnits(q, pool);
   var f = cfCur(); var scoped = pool && (f.site.length || f.kase.length || f.st.length);
   if (mode === 'drop') { var box = $('#sdrop'); if (!q.trim()) { box.hidden = true; return; } box.hidden = false; box.innerHTML = rs.length ? rs.map(function (u) { return resRow(u); }).join('') : '<div class="snone">' + (scoped ? '目前篩選結果中查無「' + esc(q) + '」，可清除篩選後再搜尋' : '查無「' + esc(q) + '」，可改用單元名稱、地址或電話末 3 碼搜尋') + '</div>'; }
   if (mode === 'inline') { var m = $('#mres'); if (!q.trim()) { m.hidden = true; return; } m.hidden = false; m.innerHTML = rs.length ? rs.map(function (u) { return resRow(u); }).join('') : '<div class="snone">查無「' + esc(q) + '」</div>'; }
@@ -2256,6 +2325,141 @@ function needDue(v) { var n = needInt(v, '繳款日'); if (n > 31) throw '繳款
 function lastRentedEnd(u) { var x = S.statusLog.filter(function (y) { return y.unitId === u.id && y.status === '已出租' && y.to; }).sort(function (a, b) { return a.to < b.to ? -1 : 1; }).pop(); return x ? x.to : null; }
 function optInt(v, label) { return String(v || '').trim() === '' ? null : needInt(v, label, true); }
 
+/* ================= 維修與費用（D-223、D-226）：公區報修、完工與案件拆分、登錄正航、作廢、維修資料 ================= */
+/* 成本：負數只限費用類別「其他」，且備註必填（B-34）；allowZero＝維修完工可為 0，費用登錄不可為 0 */
+function needCost(v, cat, note, label, allowZero) {
+  var n = Math.round(Number(String(v).replace(/[,\s]/g, '')));
+  if (isNaN(n)) throw label + '要填整數';
+  if (n < 0) {
+    if (cat !== '其他') throw label + '不能是負數；只有費用類別「其他」可以填負數（例：房東事後補回，D-226、B-34）';
+    if (!String(note || '').trim()) throw '成本為負數時備註必填，請寫明原因（例：房東事後補回，對應〇〇年〇月〇〇維修；B-34）';
+  }
+  if (n === 0 && !allowZero) throw label + '要填不為 0 的整數';
+  return n;
+}
+function siteCases(site) { var s = first(siteList(), function (x) { return x.name === site; }); return s ? s.caseIds.map(function (id) { return C(id); }) : []; }
+function caseIdByName(site, name) { var c = first(siteCases(site), function (x) { return x.name === name; }); if (!c) throw '請選擇案件'; return c.id; }
+function pubSitePick(kind) {
+  modal(kind === 'repair' ? '公區報修：選擇案場' : '公區登錄費用：選擇案場', '<div class="plist">' + siteList().map(function (s) {
+    return '<button type="button" class="sres" style="width:100%;border:none;background:none;text-align:left;cursor:pointer" data-act="pub-site" data-k="' + kind + '" data-site="' + esc(s.name) + '"><span class="lmain"><b>' + esc(s.name) + '</b><small>' + s.units + ' 間出租單元｜' + s.caseIds.map(function (id) { return esc(C(id).name); }).join('、') + '</small></span></button>';
+  }).join('') + '</div>', { sub: '公區紀錄沒有單元；下一步選案件' });
+}
+function pubForm(kind, site) {
+  var names = siteCases(site).map(function (c) { return c.name; });
+  var caseFld = fld('案件（上位契約）', sel('kase', names), '此案場有房屋的案件；公區費用算進這個案件的維修成本' + (kind === 'repair' ? '，完工時可拆給多個案件（D-223）' : '（D-130）'));
+  if (kind === 'repair') {
+    modal('公區報修｜' + esc(site), caseFld + fld('維修項目', inp('item', '', 'placeholder="例：公區走道漏水"')) + dateFld('date', '報修日', TODAY) + fld('備註（選填）', '<textarea name="memo"></textarea>', '建立後仍可在「維修資料」補寫或修改'), { sub: '公區維修沒有單元；完工時再填成本與案件拆分', submit: '建立報修', onSubmit: function (f) {
+      var item = needText(f.item, '維修項目'); var d = needDate(f.date, '報修日'); var cid = caseIdByName(site, f.kase);
+      S.maint.push({ id: uid('m'), site: site, caseId: cid, item: item, note: (f.memo || '').trim(), reportDate: d, doneDate: null, cost: 0, charge: 0, resp: '', erp: '' });
+      return '已建立公區報修，已列入首頁「維修未結案」';
+    } });
+    return;
+  }
+  modal('公區登錄費用｜' + esc(site), fld('費用類別', sel('cat', ['發文郵資', '其他'])) + caseFld + fld('項目', inp('item', '', 'placeholder="例：房東事後補回某公區維修"')) + '<div class="row2">' + dateFld('date', '支出日', TODAY) + fld('金額', inp('cost', '', 'inputmode="numeric"'), '類別「其他」可填負數（房東補回等）；負數時備註必填') + '</div>' +
+    '<div class="row2">' + fld('請款人（代墊人）', inp('payer', isAdmin() ? '陳經理' : '小林')) + fld('正航單號（選填）', inp('erp', '')) + '</div>' + fld('備註', '<textarea name="note" placeholder="例：房東事後補回，對應114年3月某公區維修"></textarea>', '成本為負數時必填'), { sub: '公區沒有單元，也不向房客收取；是否登記由經辦人員決定（D-091）', submit: '登錄', onSubmit: function (f) {
+    var item = needText(f.item, '項目'); var d = needDate(f.date, '支出日'); var cid = caseIdByName(site, f.kase); var c = needCost(f.cost, f.cat, f.note, '金額', false);
+    S.maint.push({ id: uid('m'), cat: f.cat, site: site, caseId: cid, splits: [{ caseId: cid, amount: c }], item: item, reportDate: d, doneDate: d, cost: c, charge: 0, resp: '', erp: f.erp || '', payer: (f.payer || '').trim(), note: (f.note || '').trim() });
+    return '已登錄' + f.cat + ' ' + money(c) + '，列在「維修與費用 → 其他費用」';
+  } });
+}
+/* 公區完工：案件拆分列數＝案場的案件數（預設只顯示 1 列，按「再拆一個案件」逐列展開）；只選一個案件且金額留白＝全額；拆多筆時各筆都要填金額，合計須等於維修成本（B-31） */
+function pubDoneModal(m) {
+  var names = siteCases(m.site).map(function (c) { return c.name; });
+  var N = names.length; var idx = []; for (var q = 1; q <= N; q++) idx.push(q);
+  var rows = idx.map(function (i) { return '<div class="row2 splitrow"' + (i === 1 ? '' : ' hidden') + '>' + fld('案件 ' + i, sel('k' + i, [''].concat(names), i === 1 ? C(m.caseId).name : '')) + fld('金額' + (i === 1 ? '（只選一個案件時可留白＝全額）' : ''), inp('a' + i, '', 'inputmode="numeric"')) + '</div>'; }).join('') +
+    (N > 1 ? '<button type="button" class="btn sm outline" data-act="split-add" style="margin-bottom:8px">＋ 再拆一個案件（此案場共 ' + N + ' 個案件）</button>' : '');
+  modal('登錄完工｜' + esc(mName(m)), '<p>' + esc(m.item) + '（報修日 ' + roc(m.reportDate) + '）</p>' + dateFld('date', '完工日', TODAY) + '<div class="row2">' + fld('維修成本', inp('cost', '', 'inputmode="numeric"'), '含稅總額（D-093）') + fld('正航單號（選填）', inp('erp', '')) + '</div>' +
+    '<p class="muted small" style="margin:4px 0">案件歸屬：公區費用算進所選案件的維修成本。要拆給多個案件時，每個案件填一筆金額，合計須等於維修成本（B-31）；系統不自動均分（D-039）。</p>' + rows +
+    '<p class="muted small">公區沒有租約，不向房客收費；責任歸屬固定「非人為（公司負擔）」。</p>', { submit: '登錄完工', onSubmit: function (f) {
+    if (m.doneDate) throw '這筆已經完工';
+    var d = needDate(f.date, '完工日'); if (d < m.reportDate) throw '完工日不能早於報修日';
+    var cost = needCost(f.cost, '維修', null, '維修成本', true); var rs = [];
+    idx.forEach(function (i) {
+      var kn = f['k' + i], an = String(f['a' + i] || '').trim(); if (!kn && !an) return;
+      if (!kn) throw '案件拆分第 ' + i + ' 筆有金額但沒選案件';
+      var cid = caseIdByName(m.site, kn); if (rs.some(function (r) { return r.caseId === cid; })) throw '同一個案件不要重複，請合併成一筆';
+      rs.push({ caseId: cid, a: an });
+    });
+    if (!rs.length) throw '請至少選一個案件';
+    if (rs.length === 1 && rs[0].a === '') rs[0].amount = cost;
+    else rs.forEach(function (r) { if (r.a === '') throw '拆成多筆時每筆都要填金額'; r.amount = needInt(r.a, '案件拆分金額', true); });
+    var tot = sum(rs, function (r) { return r.amount; });
+    if (tot !== cost) throw '案件拆分合計 ' + money(tot) + ' 不等於維修成本 ' + money(cost) + '（B-31）';
+    m.doneDate = d; m.cost = cost; m.charge = 0; m.resp = '非人為（公司負擔）'; m.erp = f.erp || '';
+    m.splits = rs.map(function (r) { return { caseId: r.caseId, amount: r.amount }; }); m.caseId = m.splits[0].caseId;
+    return '已結案；公司實際負擔 ' + money(cost) + (m.splits.length > 1 ? '，拆給 ' + m.splits.length + ' 個案件' : '') + (m.erp ? '' : '；正航單號尚未登錄');
+  } });
+}
+function maintDoneModal(m) {
+  var hasL = !!activeLease(m.unitId);
+  modal('登錄完工｜' + uName(m.unitId), '<p>' + esc(m.item) + '（報修日 ' + roc(m.reportDate) + '）</p>' + dateFld('date', '完工日', TODAY) + '<div class="row2">' + fld('維修成本', inp('cost', '', 'inputmode="numeric"'), '公司實際支出') + fld('正航單號（選填）', inp('erp', ''), '先空著也可以，之後在總表按「登錄正航」補登') + '</div>' +
+    fld('責任歸屬（由維修廠商判定）', sel('resp', ['非人為（公司負擔）', '人為（向房客收費）', '附屬設備現況點交（不求償）'])) + fld('向房客收費', inp('charge', 0, 'inputmode="numeric"'), '人為損壞才收；家具家電可查折舊參考表協商'), { submit: '登錄完工', onSubmit: function (f) {
+    if (m.doneDate) throw '這筆已經完工';
+    var d = needDate(f.date, '完工日'); if (d < m.reportDate) throw '完工日不能早於報修日'; var cost = needCost(f.cost, '維修', null, '維修成本', true); var ch = needInt(f.charge || 0, '向房客收費', true);
+    if (f.resp.indexOf('人為（') === 0 && !ch) throw '人為損壞要填向房客收費的金額';
+    if (f.resp.indexOf('人為（') !== 0 && ch) throw '非人為損壞不向房客收費，收費請填 0';
+    if (ch && !hasL) throw '本戶目前無租約，無法向房客收費';
+    m.doneDate = d; m.cost = cost; m.charge = ch; m.resp = f.resp; m.erp = f.erp || '';
+    if (ch) S.receivables.push({ id: uid('rv'), leaseId: activeLease(m.unitId).id, item: '維修收費', month: d.slice(0, 7), due: addDays(d, 7), amount: ch, paid: 0 });
+    return '已結案' + (ch ? '，維修收費 ' + money(ch) + ' 列入應收' : '') + '；公司實際負擔 ' + money(cost - ch) + (m.erp ? '' : '；正航單號尚未登錄');
+  } });
+}
+/* 維修資料視窗：整列點擊開啟；進行中有完工與作廢；完工未登錄正航有登錄正航；已完工沒有作廢（B-32） */
+function maintViewModal(m) {
+  var sm = m.voided ? '已作廢' : maintState(m); var live = !m.voided;
+  var body = '<div style="margin:4px 0 10px">' + kvRow('對象', esc(mName(m))) + kvRow(isRepair(m) ? '維修項目' : '項目', esc(m.item)) + (isRepair(m) ? '' : kvRow('費用類別', esc(m.cat))) + kvRow('狀態', sm) + kvRow('報修日', roc(m.reportDate)) +
+    (m.doneDate ? kvRow('完工日', roc(m.doneDate)) + kvRow('維修成本', money(m.cost)) : '') + (m.charge ? kvRow('向房客收費', money(m.charge)) : '') + (m.resp ? kvRow('責任歸屬', esc(m.resp)) : '') +
+    kvRow('正航單據編號', m.erp ? esc(m.erp) : '（尚未登錄）') + (m.unitId ? '' : kvRow('案件', m.splits && m.splits.length ? m.splits.map(function (x) { return esc(C(x.caseId).name) + ' ' + money(x.amount); }).join('、') : esc(C(m.caseId).name) + '（完工時可拆給多個案件）')) +
+    (m.payer ? kvRow('請款人', esc(m.payer)) : '') + (m.note ? kvRow('備註', '<span style="white-space:pre-wrap">' + esc(m.note) + '</span>') : '') + (m.voided ? kvRow('作廢', roc(m.voided.date) + '｜' + esc(m.voided.by) + '｜' + esc(m.voided.reason)) : '') + '</div>' +
+    '<div class="acts" style="gap:8px;flex-wrap:wrap">' + (live && !m.doneDate ? '<button type="button" class="btn sm primary" data-act="maint-done" data-id="' + m.id + '">登錄完工</button><button type="button" class="btn sm ghost" data-act="maint-void" data-id="' + m.id + '">作廢</button>' : '') +
+    (live && m.doneDate && !m.erp ? '<button type="button" class="btn sm primary" data-act="maint-erp" data-id="' + m.id + '">登錄正航</button>' : '') + (live && isRepair(m) ? '<button type="button" class="btn sm outline" data-act="maint-note" data-id="' + m.id + '">' + (m.note ? '修改備註' : '填寫備註') + '</button>' : '') + (m.unitId ? '<a class="btn sm ghost" href="#/unit/' + m.unitId + '" data-act="close-modal">前往單戶頁</a>' : '') + '</div>';
+  modal('維修資料', body, {});
+}
+function maintAction(act, ds) {
+  var m = ds.id ? byId(S.maint, ds.id) : null;
+  if (act === 'pub-pick') { pubSitePick(ds.k); return true; }
+  if (act === 'pub-site') { pubForm(ds.k, ds.site); return true; }
+  if (act === 'split-add') {   /* 公區完工：顯示下一個隱藏的案件拆分列；列數上限＝案場的案件數 */
+    var hid = document.querySelector('#mform .splitrow[hidden]'); if (hid) hid.hidden = false;
+    if (!document.querySelector('#mform .splitrow[hidden]')) { var sb = document.querySelector('#mform [data-act="split-add"]'); if (sb) sb.hidden = true; }
+    return true;
+  }
+  if (!m) return false;
+  if (act === 'maint-view') { maintViewModal(m); return true; }
+  if (act === 'maint-note') {
+    if (m.voided || !isRepair(m)) { toast('這筆不能修改備註'); return true; }
+    modal('維修備註｜' + esc(mName(m)), '<p>' + esc(m.item) + '（報修日 ' + roc(m.reportDate) + '）</p>' + fld('備註', '<textarea name="note">' + esc(m.note || '') + '</textarea>', '進行中、已完工都可以補寫或修改；留白＝清除備註'), { submit: '儲存', onSubmit: function (f) {
+      if (m.voided) throw '這筆已作廢，不能修改備註';
+      m.note = (f.note || '').trim(); return m.note ? '已儲存備註' : '已清除備註';
+    } });
+    return true;
+  }
+  if (act === 'maint-done') {
+    if (m.voided) { toast('這筆已作廢，不能登錄完工'); return true; }
+    if (m.doneDate) { toast('這筆已經完工'); return true; }
+    if (m.unitId) maintDoneModal(m); else pubDoneModal(m);
+    return true;
+  }
+  if (act === 'maint-erp') {
+    if (m.voided || !m.doneDate) { toast('還沒完工，請先登錄完工'); return true; }
+    if (m.erp) { toast('這筆已有正航單號'); return true; }
+    modal('登錄正航｜' + esc(mName(m)), '<p>' + esc(m.item) + '（完工日 ' + roc(m.doneDate) + '，成本 ' + money(m.cost) + '）</p>' + fld('正航單據編號', inp('erp', '', 'placeholder="例：EX-1150999"'), '填入後狀態變為已完工'), { submit: '登錄', onSubmit: function (f) {
+      if (m.erp) throw '這筆已有正航單號'; var e = needText(f.erp, '正航單據編號'); m.erp = e; return '已登錄正航單號 ' + e;
+    } });
+    return true;
+  }
+  if (act === 'maint-void') {
+    if (m.voided) { toast('這筆已作廢'); return true; }
+    if (m.doneDate) { toast('已完工的維修紀錄不能作廢（B-32）'); return true; }
+    modal('作廢維修紀錄｜' + esc(mName(m)), '<p>' + esc(m.item) + '（報修日 ' + roc(m.reportDate) + '）</p>' + fld('作廢原因（必填）', '<textarea name="why" placeholder="例：重複建立、房客自行處理"></textarea>', '作廢後紀錄保留（D-108），不計入損益與未結案件數；開「只看作廢」才看得到'), { submit: '確定作廢', onSubmit: function (f) {
+      if (m.doneDate) throw '已完工的維修紀錄不能作廢（B-32）';
+      var why = needText(f.why, '作廢原因'); m.voided = { date: TODAY, by: isAdmin() ? '陳經理' : '小林', reason: why }; return '已作廢，紀錄保留';
+    } });
+    return true;
+  }
+  return false;
+}
+
 function pickList(q, kind) {
   var need = kind === 'pay' || kind === 'contact' || kind.indexOf('sus:') === 0;
   var us = (q && q.trim() ? searchUnits(q) : S.units.filter(function (u) { return kind === 'status' ? u.status !== '已出租' : true; }).slice(0, 12)).filter(function (u) { return !need || activeLease(u.id); });
@@ -2266,7 +2470,8 @@ function pickList(q, kind) {
 }
 function openPick(kind, title, sub) {
   var T = { expense: '登錄費用：選擇單元', repair: '報修：選擇單元', status: '狀態回報：選擇單元', contact: '聯繫紀錄：選擇單元', pay: '登錄收款：選擇單元' };
-  modal(title || T[kind], '<div class="sbox" style="width:100%">' + ic('search') + '<input type="search" autocomplete="off" aria-label="搜尋單元" placeholder="單元名稱、地址、稱呼" data-search="pick" data-k="' + kind + '"></div><div id="pres" class="plist">' + pickList('', kind) + '</div>', { sub: sub || (kind === 'status' ? '預設列出空房（整備中、招租中、特殊狀況）；也可以搜尋' : '可輸入單元名稱、地址或稱呼') });
+  var pubBtn = kind === 'repair' || kind === 'expense' ? '<button type="button" class="btn outline" style="width:100%;margin-bottom:10px" data-act="pub-pick" data-k="' + kind + '">' + (kind === 'repair' ? '公區報修' : '公區登錄費用') + '（不選單元，改選案場）</button>' : '';
+  modal(title || T[kind], pubBtn + '<div class="sbox" style="width:100%">' + ic('search') + '<input type="search" autocomplete="off" aria-label="搜尋單元" placeholder="單元名稱、地址、稱呼" data-search="pick" data-k="' + kind + '"></div><div id="pres" class="plist">' + pickList('', kind) + '</div>', { sub: sub || (kind === 'status' ? '預設列出空房（整備中、招租中、特殊狀況）；也可以搜尋' : '可輸入單元名稱、地址或稱呼') });
 }
 
 /* ================= 動作 ================= */
@@ -2277,6 +2482,7 @@ function makeFilings(l) { ['實價登錄', '地政司包租／轉租申報'].for
 function openAction(act, ds) {
   var u = ds.u ? U(ds.u) : null; var l = ds.l ? L(ds.l) : null;
   if (!u && l) u = U(l.unitId);
+  if (maintAction(act, ds)) return;
   if (act === 'pay') {
     var open = leaseOpen(l.id);
     var lo = lateOpenRents(l);
@@ -2311,18 +2517,18 @@ function openAction(act, ds) {
         return '已改為迄日前 ' + n + ' 天開始提醒' + (inRemind(l) ? '；這份租約目前已在提醒期內' : '；這份租約目前不在提醒期內');
       } });
   } else if (act === 'repair') {
-    modal('報修｜' + uName(u.id), fld('維修項目', inp('item', '', 'placeholder="例：熱水器不熱"')) + dateFld('date', '報修日', TODAY) + fld('補充說明（選填）', '<textarea name="memo"></textarea>'), { sub: '完工時再填成本、責任歸屬與向房客收費', submit: '建立報修', onSubmit: function (f) {
+    modal('報修｜' + uName(u.id), fld('維修項目', inp('item', '', 'placeholder="例：熱水器不熱"')) + dateFld('date', '報修日', TODAY) + fld('備註（選填）', '<textarea name="memo"></textarea>', '建立後仍可在「維修資料」補寫或修改'), { sub: '完工時再填成本、責任歸屬與向房客收費', submit: '建立報修', onSubmit: function (f) {
       var item = needText(f.item, '維修項目'); var d = needDate(f.date, '報修日');
-      S.maint.push({ id: uid('m'), unitId: u.id, item: item + (f.memo ? '（' + f.memo.trim() + '）' : ''), reportDate: d, doneDate: null, cost: 0, charge: 0, resp: '', erp: '' });
+      S.maint.push({ id: uid('m'), unitId: u.id, item: item, note: (f.memo || '').trim(), reportDate: d, doneDate: null, cost: 0, charge: 0, resp: '', erp: '' });
       return '已建立報修，已列入首頁「維修未結案」';
     } });
   } else if (act === 'expense') {
     var nos = S.notices.filter(function (n) { var ln = L(n.leaseId); return ln && ln.unitId === u.id && n.kind.indexOf('存證信函') === 0; }).map(function (n) { return n.no; });
-    modal('登錄費用｜' + uName(u.id), fld('費用類別', sel('cat', ['發文郵資', '其他'])) + fld('項目', inp('item', ds.no ? '存證信函 ' + ds.no + ' 郵資' : '', 'placeholder="例：存證信函郵資、掛號郵資"')) + '<div class="row2">' + dateFld('date', '支出日', TODAY) + fld('金額', inp('cost', '', 'inputmode="numeric"'), '依郵局收據') + '</div>' +
-      '<div class="row2">' + fld('請款人（代墊人）', inp('payer', isAdmin() ? '陳經理' : '小林')) + fld('正航單號（選填）', inp('erp', '')) + '</div>' + fld('關聯文號（選填）', sel('no', [''].concat(nos), ds.no || ''), nos.length ? '對照對外發文紀錄' : '本戶無存證信函紀錄'), {
+    modal('登錄費用｜' + uName(u.id), fld('費用類別', sel('cat', ['發文郵資', '其他'])) + fld('項目', inp('item', ds.no ? '存證信函 ' + ds.no + ' 郵資' : '', 'placeholder="例：存證信函郵資、掛號郵資"')) + '<div class="row2">' + dateFld('date', '支出日', TODAY) + fld('金額', inp('cost', '', 'inputmode="numeric"'), '依郵局收據；類別「其他」可填負數（房東補回等），負數時備註必填') + '</div>' +
+      '<div class="row2">' + fld('請款人（代墊人）', inp('payer', isAdmin() ? '陳經理' : '小林')) + fld('正航單號（選填）', inp('erp', '')) + '</div>' + fld('關聯文號（選填）', sel('no', [''].concat(nos), ds.no || ''), nos.length ? '對照對外發文紀錄' : '本戶無存證信函紀錄') + fld('備註', '<textarea name="note" placeholder="例：房東事後補回，對應114年3月某維修"></textarea>', '成本為負數時必填'), {
       sub: '是否登記由經辦人員決定；系統不自動計算存證費，亦不向房客收取（D-091）。維修請使用「報修」。', submit: '登錄', onSubmit: function (f) {
-        var item = needText(f.item, '項目'); var d = needDate(f.date, '支出日'); var c = needInt(f.cost, '金額');
-        S.maint.push({ id: uid('m'), cat: f.cat, unitId: u.id, item: item, reportDate: d, doneDate: d, cost: c, charge: 0, resp: '', erp: f.erp || '', payer: (f.payer || '').trim(), noticeNo: f.no || '' });
+        var item = needText(f.item, '項目'); var d = needDate(f.date, '支出日'); var c = needCost(f.cost, f.cat, f.note, '金額', false);
+        S.maint.push({ id: uid('m'), cat: f.cat, unitId: u.id, item: item, reportDate: d, doneDate: d, cost: c, charge: 0, resp: '', erp: f.erp || '', payer: (f.payer || '').trim(), noticeNo: f.no || '', note: (f.note || '').trim() });
         return '已登錄' + f.cat + ' ' + money(c) + '，列在「維修與費用 → 其他費用」';
       } });
   } else if (act === 'contact') {
@@ -2534,19 +2740,6 @@ document.addEventListener('click', function (e) {
   if (act === 'ctext') { contractModal(L(ds.l), ds.run); return; }
   if (act === 'paylog') { paylogModal(L(ds.l)); return; }
   if (act === 'payable-paid') { var p = byId(S.payables, ds.id); modal('登錄已付款', '<p>' + esc(p.payee) + '｜' + esc(p.period) + '｜' + money(p.amount) + '</p>' + dateFld('date', '付款日', TODAY), { submit: '登錄', onSubmit: function (f) { p.paidDate = needDate(f.date, '付款日'); return '已登錄付款'; } }); return; }
-  if (act === 'maint-done') {
-    var m = byId(S.maint, ds.id); var hasL = !!activeLease(m.unitId);
-    modal('登錄完工｜' + uName(m.unitId), '<p>' + esc(m.item) + '（報修日 ' + roc(m.reportDate) + '）</p>' + dateFld('date', '完工日', TODAY) + '<div class="row2">' + fld('維修成本', inp('cost', '', 'inputmode="numeric"'), '公司實際支出') + fld('正航單號（選填）', inp('erp', '')) + '</div>' +
-      fld('責任歸屬（由維修廠商判定）', sel('resp', ['非人為（公司負擔）', '人為（向房客收費）', '附屬設備現況點交（不求償）'])) + fld('向房客收費', inp('charge', 0, 'inputmode="numeric"'), '人為損壞才收；家具家電可查折舊參考表協商'), { submit: '登錄完工', onSubmit: function (f) {
-        var d = needDate(f.date, '完工日'); if (d < m.reportDate) throw '完工日不能早於報修日'; var cost = needInt(f.cost, '維修成本', true); var ch = needInt(f.charge || 0, '向房客收費', true);
-        if (f.resp.indexOf('人為（') === 0 && !ch) throw '人為損壞要填向房客收費的金額';
-        if (f.resp.indexOf('人為（') !== 0 && ch) throw '非人為損壞不向房客收費，收費請填 0';
-        if (ch && !hasL) throw '本戶目前無租約，無法向房客收費';
-        m.doneDate = d; m.cost = cost; m.charge = ch; m.resp = f.resp; m.erp = f.erp || '';
-        if (ch) S.receivables.push({ id: uid('rv'), leaseId: activeLease(m.unitId).id, item: '維修收費', month: d.slice(0, 7), due: addDays(d, 7), amount: ch, paid: 0 });
-        return '已結案' + (ch ? '，維修收費 ' + money(ch) + ' 列入應收' : '') + '；公司實際負擔 ' + money(cost - ch);
-      } }); return;
-  }
   if (act === 'filing-done') { var fdo = byId(S.filings, ds.id); modal('標記已辦｜' + fdo.type, '<p>' + uName(fdo.unitId) + '｜簽約日 ' + roc(fdo.signDate) + '</p>' + dateFld('date', '辦理日', TODAY) + fld('回執編號（選填）', inp('receipt', '')), { submit: '標記已辦', onSubmit: function (f) { fdo.doneDate = needDate(f.date, '辦理日'); fdo.receipt = f.receipt || ''; fdo.status = '已辦'; return '已標記已辦'; } }); return; }
   if (act === 'filing-skip') { var fsk = byId(S.filings, ds.id); modal('決定不申報｜' + fsk.type, '<p>' + uName(fsk.unitId) + '</p>' + fld('理由（必填）', '<textarea name="reason" placeholder="例：屬豁免情形（說明依據）"></textarea>', '不需主管核准，但理由必填（D-066）'), { submit: '確定', onSubmit: function (f) { fsk.reason = needText(f.reason, '理由'); fsk.status = '不申報'; return '已記錄不申報與理由'; } }); return; }
   if (act === 'notice-ok') { if (!isAdmin()) { toast('限管理者確認發文'); return; } var n = byId(S.notices, ds.id); n.status = '已確認'; save(); render(); toast(n.no + ' 已確認，可寄出' + (n.kind.indexOf('存證信函') === 0 ? '；如需登記郵資，請至單戶頁執行「登錄費用」（選填）' : '')); return; }
@@ -2637,6 +2830,12 @@ document.addEventListener('click', function (e) {
 document.addEventListener('change', function (e) {
   var t = e.target; var k = t.getAttribute('data-change'); if (!k) return;
   if (k === 'site-basis') { var bsid = t.getAttribute('data-site'), bus = usite(bsid), bk = t.getAttribute('data-meter'), bv = t.value === 'room' ? 'room' : 'head'; if (!isAdmin() || !bus) { render(); toast('案場設定限管理者修改（D-073）'); return; } var bold = siteBasis(bsid)[bk]; S.siteCfg = S.siteCfg || {}; S.siteCfg[bsid] = S.siteCfg[bsid] || {}; S.siteCfg[bsid].basis = S.siteCfg[bsid].basis || {}; S.siteCfg[bsid].basis[bk] = bv; var bname = bk === 'water' ? '水費總表' : first(bus.meters, function (m) { return m.id === bk; }).name; if (bold !== bv) S.settingLog.push({ caseId: bus.caseId, date: TODAY, item: bus.name + ' ' + bname + '分攤基數', from: BASIS[bold], to: BASIS[bv], by: '管理者', why: '案場設定切換' }); save(); render(); toast(bus.name + ' ' + bname + '：改為' + BASIS[bv] + '（已產生應收的期次不受影響）'); return; }
+  if (k === 'mf') {   /* 維修頁篩選：案場、上位契約、公區、只看作廢（D-223）；換案場時，已選的上位契約不在該案場就清掉 */
+    var mk = t.getAttribute('data-k');
+    if (mk === 'site') { MF.site = t.value; if (MF.kase && mfCaseOpts().every(function (c) { return c.id !== MF.kase; })) MF.kase = ''; }
+    else if (mk === 'kase') MF.kase = t.value; else if (mk === 'pub') MF.pub = !!t.checked; else if (mk === 'voided') MF.voided = !!t.checked;
+    render(); return;
+  }
   if (k === 'site-hold') { var hsid = t.getAttribute('data-site'), hus = usite(hsid), hv = Number(t.value); if (!isAdmin() || !hus) { render(); toast('案場設定限管理者修改（D-073）'); return; } if (!(hv >= 0) || Math.round(hv) !== hv) { render(); toast('預扣額請填 0 以上的整數元'); return; } var hold0 = siteHold(hsid); S.siteCfg = S.siteCfg || {}; S.siteCfg[hsid] = S.siteCfg[hsid] || {}; S.siteCfg[hsid].hold = hv; if (hold0 !== hv) S.settingLog.push({ caseId: hus.caseId, date: TODAY, item: hus.name + ' 退租水電預扣額', from: num(hold0), to: num(hv), by: '管理者', why: '案場設定修改' }); save(); render(); toast(hus.name + '：退租水電預扣額改為 ' + money(hv) + '（已建立的結算不變）'); return; }
   if (k === 'site-laundry') { var sid = t.getAttribute('data-site'), us = usite(sid); if (!isAdmin() || !us) { render(); toast('案場設定限管理者修改（D-073）'); return; } var was = siteLaundry(sid); S.siteCfg = S.siteCfg || {}; S.siteCfg[sid] = S.siteCfg[sid] || {}; S.siteCfg[sid].laundry = !!t.checked; if (was !== !!t.checked) S.settingLog.push({ caseId: us.caseId, date: TODAY, item: us.name + ' 洗衣收入沖抵公電', from: was ? '有' : '無', to: t.checked ? '有' : '無', by: '管理者', why: '案場設定勾選' }); save(); render(); toast(us.name + (t.checked ? '：已啟用洗衣收入沖抵公電' : '：已停用洗衣收入沖抵公電')); return; }
   if (k === 'laundry-per') { var lpErr = laundrySetPeriod(t.getAttribute('data-id'), +t.getAttribute('data-floor'), t.value); if (!lpErr) save(); render(); if (lpErr) toast(lpErr); return; }
@@ -2712,8 +2911,16 @@ function render() {
   }
   if (S.loggedOut) { page = 'login'; html = pLogin(); }
   if (document.body && document.body.classList) document.body.classList.toggle('nonav', page === 'home' || page === 'login');
-  $('#side').innerHTML = sideNav(page); $('#main').innerHTML = html; $('#tabbar').innerHTML = tabbar(page);
+  $('#side').innerHTML = sideNav(page); $('#main').innerHTML = html; $('#tabbar').innerHTML = tabbar(page); fitMaint();
 }
+/* 維修總表固定顯示 10 列高度、其他費用 5 列高度，超過用捲動；列高不一，所以量第 N 列的底緣（N 筆以內不限高） */
+function fitMaint() {
+  document.querySelectorAll('.mscroll').forEach(function (b) {
+    b.style.maxHeight = ''; var n = +b.getAttribute('data-rows') || 10; var r = b.children; if (r.length <= n) return;
+    b.style.maxHeight = (r[n - 1].offsetTop + r[n - 1].offsetHeight - r[0].offsetTop) + 'px';
+  });
+}
+window.addEventListener('resize', fitMaint);
 window.addEventListener('hashchange', function () {
   closeModal(); closePop(); CF_OPEN = null; CF_Q = {}; render(); window.scrollTo(0, 0);
   var p = route();
