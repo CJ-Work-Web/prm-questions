@@ -96,6 +96,13 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 .acard{padding:18px 20px;display:flex;flex-direction:column;gap:10px}
 .acard-h{display:flex;align-items:center;gap:10px}
 .acard-h h3{font-size:16px;font-weight:500;flex:1}
+.acard-link{color:inherit;text-decoration:none}
+.acard-go{display:inline-flex;color:var(--text2);transition:transform .15s,color .15s}
+.acard.click{cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s}
+.acard.click:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(80,60,40,.14);background:#FFFDF9}
+.acard.click:hover .acard-go{transform:translateX(3px);color:var(--accent-d)}
+.acard.click:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.acard.click,.acard-go{transition:none}.acard.click:hover{transform:none}}
 .acount{display:flex;align-items:baseline;gap:6px}
 .acount b{font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
 .acount span{color:var(--text2);font-size:15px}
@@ -1070,9 +1077,8 @@ function tabsNav(items, cur) { return '<nav class="tabs">' + items.map(function 
 /* ================= 首頁 ================= */
 var SEVTXT = { red: '高優先', amber: '中優先', gray: '持續追蹤' };
 function cardHtml(c) {
-  return '<article class="card acard sev-' + c.sev + ' click" data-go="#/todo/' + c.key + '"><div class="acard-h"><h3>' + c.title + '<span class="sr">（' + SEVTXT[c.sev] + '）</span></h3>' + (c.admin ? '<span class="tag">限管理者</span>' : '') + '</div>' +
-    '<div class="acount"><b>' + c.count + '</b><span>' + c.unit + '</span></div><p class="adetail">' + esc(c.headline) + '</p>' +
-    '<a class="more" href="#/todo/' + c.key + '">查看全部' + ic('chev', 16, 2) + '</a></article>';
+  return '<article class="card acard sev-' + c.sev + ' click" data-go="#/todo/' + c.key + '"><div class="acard-h"><h3><a class="acard-link" href="#/todo/' + c.key + '">' + c.title + '<span class="sr">（' + SEVTXT[c.sev] + '）</span></a></h3>' + (c.admin ? '<span class="tag">限管理者</span>' : '') + '<span class="acard-go" aria-hidden="true">' + ic('chev', 18, 2) + '</span></div>' +
+    '<div class="acount"><b>' + c.count + '</b><span>' + c.unit + '</span></div><p class="adetail">' + esc(c.headline) + '</p></article>';
 }
 function tasksPanel() {
   var d = S.tasks.filter(function (t) { return t.done; }).length;
