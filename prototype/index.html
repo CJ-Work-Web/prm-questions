@@ -1860,7 +1860,7 @@ function voidRecDo(r, why) {
 /* 手動作廢一筆應收；水電費要連同分攤期次一起作廢（01 §1.5.9），所以走 utilVoidPeriod */
 function voidRec(r, why) {
   if (!isAdmin()) throw VOID_ADMIN;
-  if (r && r.item === '水電費') throw '水電費應收請至「水電分攤」頁作廢該期次，期次與應收要一起作廢';
+  if (r && (r.item === '水電費' || r.holdOf)) throw '水電費應收請至「水電分攤」頁作廢該期次，期次與應收要一起作廢';
   voidRecCheck(r, why); voidRecDo(r, why);
 }
 /* 取消分配：收款對某筆應收的沖銷明細標「已取消」，金額回到該收款的預收，再用「沖銷應收」重新分配 */
@@ -1880,7 +1880,7 @@ function utilVoidPeriod(why) {
   if (!isAdmin()) throw VOID_ADMIN;
   if (!S.utilDone) throw '115/09 還沒有產生應收，沒有可作廢的期次';
   var reason = needText(why, '作廢原因'), log = S.utilGenLog || null;
-  var recs = S.receivables.filter(function (r) { return r.item === '水電費' && r.month === '2026-09' && !r.voided && (!log || log.recIds.indexOf(r.id) >= 0); });
+  var recs = S.receivables.filter(function (r) { return (r.item === '水電費' || r.holdOf) && r.month === '2026-09' && !r.voided && (!log || log.recIds.indexOf(r.id) >= 0); });
   recs.forEach(function (r) { voidRecCheck(r, reason); });
   var back = log ? log.settle.map(function (q) { return { s: byId(S.settlements, q.id), q: q }; }).filter(function (z) { return z.s; }) : [];
   back.forEach(function (z) { if (z.s.refundedDate) throw '退租結算已退款，且用到本期帳單的水電金額，不能作廢期次；差額補退或追收的記帳方式還沒設計（V-70）'; });
@@ -2027,8 +2027,17 @@ function isGone(l) { return !l.active && !!(l.moveOut || /不續約|解約/.test
 function utilUnit(l) { return !!(S.util && (S.util.meters || {})[l.unitId] && U(l.unitId).caseId === 'c3'); }
 /* 案場設定「退租水電預扣額」（D-212）：水費、電費合計，預設 2,000；退租點交時帶入、可逐筆改、可不預扣 */
 function siteHold(id) { var v = ((S.siteCfg || {})[id] || {}).hold; return v == null ? 2000 : v; }
-/* 預扣結算：預扣額 − 實際水電；負數＝實際超過預扣額（Q-060 待定，只提醒、不自動追收） */
+/* 預扣結算：預扣額 − 實際水電；負數＝實際超過預扣額，超過部分向房客補收（D-238） */
 function holdBack(s) { var ut = s.utils || {}; return ut.hold == null || ut.water == null || ut.elec == null ? null : ut.hold - ut.water - ut.elec; }
+/* 補收額（CR-68）：預扣額先抵水費、再抵電費；水費補收＝MAX(0, 水 − 預扣)，電費補收＝合計 − 水費補收 */
+function holdOver(s) { var ut = s.utils || {}; if (ut.hold == null || ut.water == null || ut.elec == null) return { water: 0, elec: 0, total: 0 };
+  var total = Math.max(0, ut.water + ut.elec - ut.hold), w = Math.max(0, ut.water - ut.hold); return { water: w, elec: total - w, total: total }; }
+/* 待追償金額：這筆結算的補收應收未沖餘額（作廢的不算） */
+function holdChase(s) { return sum(S.receivables.filter(function (r) { return r.holdOf === s.id && !r.voided; }), function (r) { return Math.max(0, openAmt(r)); }); }
+/* 帳單到後，超過預扣額的部分產生補收應收：水費、電費各一筆（0 元不產生），應繳日＝產生當日、不計違約金（D-238） */
+function holdOverRecs(s) { var o = holdOver(s), l = L(s.leaseId), made = [];
+  [['水費', o.water], ['電費', o.elec]].forEach(function (x) { if (x[1] > 0) { var nr = { id: uid('rv'), leaseId: l.id, item: x[0], month: '2026-09', due: TODAY, amount: x[1], paid: 0, holdOf: s.id }; S.receivables.push(nr); made.push(nr); } });
+  return made; }
 /* 退租點交、編輯結算的水電欄：uh＝預扣水電費（空白＝不預扣）；選預扣時水電實際金額等帳單到後結算 */
 function utilSettle(l, d, f) {
   var ut = { water: optInt(f.uw, '水費'), elec: optInt(f.ue, '電費'), gas: optInt(f.ug, '瓦斯費') }, h = optInt(f.uh, '預扣水電費');
@@ -2038,7 +2047,7 @@ function utilSettle(l, d, f) {
 /* 帳單到（產生當期應收）：已退租的實際份額寫入退租結算；已有金額者不覆蓋（D-212） */
 function utilBillSettle(k) { k.rows.forEach(function (x) { if (!x.gone) return; var st = first(S.settlements, function (s) { return s.leaseId === x.l.id; }); if (!st || st.refundedDate && st.utils.hold == null) return;
   if (st.utils.water == null) st.utils.water = x.w; if (st.utils.elec == null) st.utils.elec = x.e + x.ce; st.utils.billDate = TODAY; }); }
-function holdNote(s) { var b = holdBack(s); if (s.utils.hold == null) return ''; if (b == null) return '預扣水電費 ' + money(s.utils.hold) + '：帳單到後按實際金額結算，退還剩餘（D-212）'; return b >= 0 ? '預扣 ' + money(s.utils.hold) + ' − 實際水電 ' + money(s.utils.water + s.utils.elec) + '＝退還 ' + money(b) + '（D-212）' : '實際水電費超過預扣額 ' + money(-b) + '：處理方式待 Q-060，系統不自動追收'; }
+function holdNote(s) { var b = holdBack(s); if (s.utils.hold == null) return ''; if (b == null) return '預扣水電費 ' + money(s.utils.hold) + '：帳單到後按實際金額結算，退還剩餘（D-212）'; return b >= 0 ? '預扣 ' + money(s.utils.hold) + ' − 實際水電 ' + money(s.utils.water + s.utils.elec) + '＝退還 ' + money(b) + '（D-212）' : '實際水電費超過預扣額 ' + money(-b) + '：向房客補收，' + (holdChase(s) > 0 ? '已產生應收，待追償 ' + money(holdChase(s)) + '；請用 LINE 或電話通知房客（D-238）' : '補收已收齊，已結清（D-238）'); }
 /* 單元私表（D-199）：掛在出租單元，一個單元可有多顆、名稱自由命名（例：110V、220V）；房內度數＝Σ 各私表（本期 − 上期）。
    房內電費＝R(房內度數 × 所屬公共電表那張帳單的電價)（CR-18；各樓帳單電價不同） */
 function unitDeg(ms) { return sum(ms || [], function (m) { return Math.max(0, m.now - m.prev); }); }
@@ -2727,7 +2736,7 @@ function openAction(act, ds) {
   if (act === 'rec-void') {
     if (!isAdmin()) { toast(VOID_ADMIN); return; }
     var vr = byId(S.receivables, ds.r); if (!vr || vr.voided) { toast('找不到這筆應收，或已作廢'); return; }
-    if (vr.item === '水電費') { toast('水電費應收請至「水電分攤」頁作廢該期次'); return; }
+    if (vr.item === '水電費' || vr.holdOf) { toast('水電費應收請至「水電分攤」頁作廢該期次'); return; }
     var vback = vr.paid;
     modal('作廢應收｜' + uName(L(vr.leaseId).unitId) + ' ' + vr.item, '<p>' + rocM(vr.month) + ' ' + vr.item + ' ' + money(vr.amount) + '，已沖 ' + money(vr.paid) + '。</p>' + (vback ? '<p class="note void">已沖的 ' + money(vback) + ' 會退回原收款成為預收，請到「預收」分頁重新分配。</p>' : '') + fld('作廢原因（必填）', '<textarea name="why" placeholder="例：重複產生、金額算錯重開"></textarea>', '作廢後紀錄保留（D-108）；已開正航銷貨單者請通知會計'), { sub: '限管理者；作廢後不計入損益與未沖餘額（D-237）', submit: '確定作廢', onSubmit: function (f) { voidRec(vr, f.why); return '已作廢 ' + rocM(vr.month) + ' ' + vr.item + (vback ? '；' + money(vback) + ' 回到預收，可重新分配' : ''); } });
     return;
@@ -2741,7 +2750,7 @@ function openAction(act, ds) {
   if (act === 'util-void') {
     if (!isAdmin()) { toast(VOID_ADMIN); return; }
     if (!S.utilDone) { toast('9 月還沒有產生應收'); return; }
-    var uvRecs = S.receivables.filter(function (r) { return r.item === '水電費' && r.month === '2026-09' && !r.voided && (!S.utilGenLog || S.utilGenLog.recIds.indexOf(r.id) >= 0); });
+    var uvRecs = S.receivables.filter(function (r) { return (r.item === '水電費' || r.holdOf) && r.month === '2026-09' && !r.voided && (!S.utilGenLog || S.utilGenLog.recIds.indexOf(r.id) >= 0); });
     modal('作廢 115/09 水電分攤期次', '<p>會一起處理：</p><ul style="padding-left:20px;line-height:1.7;margin:6px 0"><li>作廢 ' + uvRecs.length + ' 筆水電費應收（已沖 ' + money(sum(uvRecs, function (r) { return r.paid; })) + ' 退回原收款成為預收）</li><li>解除洗衣收入鎖定，9 月洗衣收入可以修改</li><li>退租結算裡由本期帳單寫入的水電金額復原（已簽名者擋下）</li><li>例行作業「水電分攤與請款明細」取消打勾</li></ul>' + fld('作廢原因（必填）', '<textarea name="why" placeholder="例：電表讀數錯誤，重新分攤"></textarea>', '分攤紀錄保留（D-108）；已開正航銷貨單者請通知會計'), { sub: '限管理者；作廢後可修正讀數、洗衣收入，再重新產生（D-237）', submit: '確定作廢期次', onSubmit: function (f) { var n = utilVoidPeriod(f.why); return '已作廢 9 月期次與 ' + n + ' 筆水電費應收；可修正後重新產生'; } });
     return;
   }
@@ -3148,7 +3157,7 @@ document.addEventListener('click', function (e) {
     modal('改分攤方式｜取款 ' + money(lx.amt), fld('分攤方式', '<select name="mode"><option value=""' + (lx.manual ? '' : ' selected') + '>平分（預設）</option><option value="manual"' + (lx.manual ? ' selected' : '') + '>手填</option></select>') + '<div class="row2">' + fld('4 樓份額', inp('s4', lo.f4, 'inputmode="numeric"')) + fld('5 樓份額', inp('s5', lo.f5, 'inputmode="numeric"')) + '</div>',
       { sub: '手填時合計必須等於取款金額（B-25）；該期產生應收後不能改（B-23）', submit: '儲存', onSubmit: function (f) { var sh = f.mode === 'manual' ? [Number(f.s4 === '' ? NaN : f.s4), Number(f.s5 === '' ? NaN : f.s5)] : null; var e = laundrySetManual(lx.id, sh); if (e) throw e; return sh ? '已改為手填 ' + num(sh[0]) + '／' + num(sh[1]) : '已改回平分'; } }); return; }
   if (act === 'laundry-void') { var lvErr = laundryVoid(ds.id); if (lvErr) { toast(lvErr); return; } save(); render(); toast('已作廢，紀錄保留'); return; }
-  if (act === 'util-gen') { S.utilHist = S.utilHist || []; S.utilHist.push(utilSnap(utilCur(), utilLeases(), function (l) { return U(l.unitId).name; }, '2026-09', TODAY)); var k = utilCalc(); var uLog = { date: TODAY, recIds: [], settle: [] }; var uBefore = S.settlements.map(function (s) { var u = s.utils || {}; return { id: s.id, water: u.water, elec: u.elec, billDate: u.billDate }; }); utilBillSettle(k); S.settlements.forEach(function (s) { var o = first(uBefore, function (b) { return b.id === s.id; }), u = s.utils || {}; if (o && (o.water !== u.water || o.elec !== u.elec || o.billDate !== u.billDate)) uLog.settle.push(o); }); k.rows.forEach(function (x) { if (x.total && !x.gone) { var nr = { id: uid('rv'), leaseId: x.l.id, item: '水電費', month: '2026-09', due: nextRentDue(x.l), carry: true, amount: x.total, paid: 0 }; S.receivables.push(nr); uLog.recIds.push(nr.id); } }); S.utilGenLog = uLog; S.utilDone = true; var t4 = byId(S.tasks, 't4'); t4.done = true; t4.doneMeta = '10/05 完成'; save(); render(); toast('已產生 ' + k.rows.length + ' 筆水電費應收，例行作業已打勾（請款明細 RP-04 試用版不產生檔案）'); return; }
+  if (act === 'util-gen') { S.utilHist = S.utilHist || []; S.utilHist.push(utilSnap(utilCur(), utilLeases(), function (l) { return U(l.unitId).name; }, '2026-09', TODAY)); var k = utilCalc(); var uLog = { date: TODAY, recIds: [], settle: [] }; var uBefore = S.settlements.map(function (s) { var u = s.utils || {}; return { id: s.id, water: u.water, elec: u.elec, billDate: u.billDate }; }); utilBillSettle(k); S.settlements.forEach(function (s) { var o = first(uBefore, function (b) { return b.id === s.id; }), u = s.utils || {}; if (o && (o.water !== u.water || o.elec !== u.elec || o.billDate !== u.billDate)) uLog.settle.push(o); }); S.settlements.forEach(function (s) { if (s.utils && s.utils.hold != null && uLog.settle.some(function (o) { return o.id === s.id; })) holdOverRecs(s).forEach(function (r) { uLog.recIds.push(r.id); }); }); k.rows.forEach(function (x) { if (x.total && !x.gone) { var nr = { id: uid('rv'), leaseId: x.l.id, item: '水電費', month: '2026-09', due: nextRentDue(x.l), carry: true, amount: x.total, paid: 0 }; S.receivables.push(nr); uLog.recIds.push(nr.id); } }); S.utilGenLog = uLog; S.utilDone = true; var t4 = byId(S.tasks, 't4'); t4.done = true; t4.doneMeta = '10/05 完成'; save(); render(); toast('已產生 ' + k.rows.length + ' 筆水電費應收，例行作業已打勾（請款明細 RP-04 試用版不產生檔案）'); return; }
   if (act === 'cal-sync') {
     if (S.calPending.length || byId(S.tasks, 't2').done) { toast('9 月日曆已同步過'); return; }
     modal('同步公司日曆（9 月）', '<p>正式版會跳出 Google 授權，讀取公司共用日曆 9 月的行程：三段碼（如 A-9-8）與唯一的兩段碼自動歸戶；無法辨識者列出由人工指定。只記單元、事件類型、日期，<b>不保存原始標題</b>（D-074）。</p>', { submit: '開始同步', onSubmit: function () {
