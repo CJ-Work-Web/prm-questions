@@ -1012,22 +1012,29 @@ function mkTrack(l, route, steps, s) {
   }
   return t;
 }
+/* 退租路線的站：③～⑧；意向「不續約」的租約另有 ①②（詢問與回覆，已完成），建立退租結算後仍保留（D-256）。s＝退租結算，尚未結算傳 null */
+function exitSteps(l, s) {
+  var hd = s && hoOf(l, '退租', '交付'), ln = s && hoOf(l, '退租', 'LINE送簽');
+  var head = l.renew === '不續約' ? [pstep(1, '應詢問', true, askDate(l)), pstep(2, '待回覆', true, l.renewReply)] : [];
+  return head.concat(s
+    ? [pstep(3, '製作退租單', true, s.moveOutDate), pstep(4, '退租單交承辦', hd, hd && hd.date, hd && hd.to), pstep(5, '待紙本簽回', s.draftOk, s.draftOk), pstep(6, '結清水電送簽', ln, ln && ln.date), pstep(7, '待線上簽回', s.signedDate, s.signedDate), pstep(8, '交會計退押', false)]
+    : [pstep(3, '製作退租單（退租點交）', false), pstep(4, '退租單交承辦', false), pstep(5, '待紙本簽回', false), pstep(6, '結清水電送簽', false), pstep(7, '待線上簽回', false), pstep(8, '交會計退押', false)]);
+}
 /* 一份租約目前的傳遞進度；不在追蹤中回傳 null。目前站＝第一個還沒完成的站，由資料算出、不另存，不看結束方式（specs/03 §9.1） */
 function paperOf(l) {
   var s = leaseSettle(l);
   if (s) {
     if (hoOf(l, '退租', '交會計')) return null;
-    var hd = hoOf(l, '退租', '交付'), ln = hoOf(l, '退租', 'LINE送簽');
-    return mkTrack(l, '退租', [pstep(3, '製作退租單', true, s.moveOutDate), pstep(4, '退租單交承辦', hd, hd && hd.date, hd && hd.to), pstep(5, '待紙本簽回', s.draftOk, s.draftOk), pstep(6, '結清水電送簽', ln, ln && ln.date), pstep(7, '待線上簽回', s.signedDate, s.signedDate), pstep(8, '交會計退押', false)], s);
+    return mkTrack(l, '退租', exitSteps(l, s), s);
   }
   if (!l.active) return null;
   if (l.track && !hoOf(l, '新約', '交會計')) {
     var ef = lastEfile(l), h4 = hoOf(l, '新約', '交付');
     return mkTrack(l, '新約', [pstep(3, '製作新約', ef, ef && ef.date), pstep(4, '交付新約', h4, h4 && h4.date, h4 && h4.to), pstep(5, '待簽回', l.returnDate, l.returnDate), pstep(6, '交會計申報', false)]);
   }
-  if (l.renew === '續約') return mkTrack(l, '續約', [pstep(1, '應詢問', true, askDate(l)), pstep(2, '待回覆', true, l.renewReply), pstep(3, '製作新約（建立續約合約）', false)]);
-  if (l.renew === '不續約') return mkTrack(l, '退租', [pstep(1, '應詢問', true, askDate(l)), pstep(2, '待回覆', true, l.renewReply), pstep(3, '製作退租單（退租點交）', false)]);
-  if (l.term) return mkTrack(l, '退租', [pstep(3, '製作退租單（退租點交）', false)]);
+  /* 路線一律畫完整站數，還沒到的站是未到（D-256）：續約 ①～⑥，退租 ③～⑧（意向不續約的另加 ①②） */
+  if (l.renew === '續約') return mkTrack(l, '續約', [pstep(1, '應詢問', true, askDate(l)), pstep(2, '待回覆', true, l.renewReply), pstep(3, '製作新約（建立續約合約）', false), pstep(4, '交付新約', false), pstep(5, '待簽回', false), pstep(6, '交會計申報', false)]);
+  if (l.renew === '不續約' || l.term) return mkTrack(l, '退租', exitSteps(l, null));
   if (inRemind(l) && l.renew === '待詢問') { var ad = askDate(l); return mkTrack(l, '到期', [pstep(1, '應詢問', ad, ad), pstep(2, '待回覆', false)]); }
   return null;
 }
