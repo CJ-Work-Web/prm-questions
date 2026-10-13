@@ -726,7 +726,7 @@ function seed() {
   st.curGroup = null;
   st.settingLog = [
     { caseId: 'c3', date: '2025-09-01', item: '公共水費分攤基數', from: '房間數', to: '總居住人數', by: '陳經理', why: '分租改收人頭制' },
-    { caseId: 'c1', date: '2026-07-01', item: '上層合約租金分段', from: '260,200', to: '268,000', by: '陳經理', why: '產權機關調租公文' }
+    { caseId: 'c1', date: '2026-07-01', item: '合約文件租金分段', from: '260,200', to: '268,000', by: '陳經理', why: '產權機關調租公文' }
   ];
   /* 單元私表（D-199）：青田街每間有 110V、220V 兩顆私表；掛在出租單元，換租客不換表 */
   var qUnits = st.units.filter(function (x) { return x.caseId === 'c3'; }), meters = {}, pub = {};
@@ -1120,9 +1120,9 @@ var CARD_DEFS = [
     head: function (it) { var r = it.filter(function (t) { return t.red; }).length; var by = {}; it.forEach(function (t) { by[t.cur.n] = (by[t.cur.n] || 0) + 1; });
       return (r ? r + ' 份申報期限 ' + FILING_ALERT_DAYS + ' 天內｜' : '') + Object.keys(by).sort().map(function (n) { return CIRC[n - 1] + ' ' + by[n] + ' 份'; }).join('、'); },
     rule: '從到期詢問到<b>交給會計</b>為止，追蹤紙本文件在誰手上（D-243、D-248）。<b>新約路線</b>（新租與續約共用）：③製作新約 → ④交付 → ⑤簽回 → ⑥交會計申報；續約多 ①應詢問（進入該約的到期提醒期，預設迄日前 45 天，D-205）、②待回覆。<b>退租路線</b>：③製作退租單（點交確認書初稿）→ ④交承辦 → ⑤紙本簽回 → ⑥結清水電、LINE 送簽 → ⑦線上簽回 → ⑧交會計退押。新約列出申報期限（簽約日＋30 天），剩 10 天內標紅、排最前（D-254）。每列顯示<b>本站已停留幾天</b>（從前一站的日期算起，①從提醒期起日算），滿 7 天標醒目（D-250）；後面的站有日期、前面的站沒有時標「跳站」，只提醒、不擋。每列「更新進度」依目前站開對應的視窗。' },
-  { key: 'master', sev: 'gray', title: '上層合約將到期', unit: '份', items: masterItems,
+  { key: 'master', sev: 'gray', title: '合約文件將到期', unit: '份', items: masterItems,
     head: function (it) { return C(it[0].caseId).name + '｜' + it[0].name + ' 迄日 ' + roc(it[0].end); },
-    rule: '對房東／產權機關的上層合約，迄日前 6 個月開始提醒（Q-015）。每個案件（上層合約）逐份計算，擴充合約依各自迄日（D-109）。' },
+    rule: '對房東／產權機關的合約文件，迄日前 6 個月開始提醒（Q-015）。主約與每份補充合約逐份計算，擴充合約依各自迄日（D-109、D-189）。' },
   { key: 'stale', sev: 'gray', title: '單元狀態太久沒更新', unit: '間', items: staleItems,
     head: function (it) { return uName(it[0].id) + '｜整備中 ' + diff(it[0].statusSince, TODAY) + ' 天'; },
     rule: '外勤回報、內勤登記是人工轉手，容易延遲（specs/02 §5.1.1）。整備中等狀態超過 30 天沒更新就提醒（D-254）。' },
@@ -1551,14 +1551,14 @@ function pCases() {
     '<div class="tblwrap cscroll"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th style="padding-right:32px">租金</th><th>契約期間</th><th class="hide-mob">提醒</th></tr></thead><tbody>' +
     (rows || '<tr><td colspan="5" class="muted">沒有符合的單元' + (f.site.length && f.kase.length && !scope.length ? '：所選案場與上層合約沒有共同的單元' : '') + '</td></tr>') + '</tbody></table></div></section>';
 }
-/* 案件內頁：主約／房屋／車位，由案件設定進入、限管理者（D-146） */
+/* 案件內頁：合約文件／房屋／車位，由案件設定進入、限管理者（D-146） */
 function pCase(id, sub) {
   var c = C(id); if (!c) return notFound();
-  if (!isAdmin()) return cfgGate('案件的主約、房屋與車位');
+  if (!isAdmin()) return cfgGate('案件的合約文件、房屋與車位');
   var s = caseStats(c); var ks = S.contracts.filter(function (k) { return k.caseId === id; }); var hs = S.houses.filter(function (h) { return h.caseId === id; }); var pk = S.parking.filter(function (p) { return p.caseId === id; });
   var tab = ['houses', 'parking'].indexOf(sub) >= 0 ? sub : 'contracts';
   var endMin = ks.map(function (k) { return k.end; }).sort()[0];
-  var tabs = [['contracts', '#/case/' + id, '主約 ' + ks.length], ['houses', '#/case/' + id + '/houses', '房屋 ' + hs.length]];
+  var tabs = [['contracts', '#/case/' + id, '合約文件 ' + ks.length], ['houses', '#/case/' + id + '/houses', '房屋 ' + hs.length]];
   if (pk.length) tabs.push(['parking', '#/case/' + id + '/parking', '車位 ' + pk.length]);
   var body = '';
   if (tab === 'contracts') {
@@ -1583,13 +1583,13 @@ function contractCard(k) {
     k.segments.map(function (g) { return '<tr><td class="num">' + roc(g.from) + '–' + (g.to ? roc(g.to) : '至今') + '</td><td class="r num">' + num(g.rent) + '</td><td>' + esc(g.reason) + '</td><td class="hide-mob">' + esc(g.doc) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
     (isAdmin() ? '<div><button class="btn sm ghost" data-act="stub" data-stub="修改上層合約（案件設定）">修改（管理者）</button></div>' : '') + '</section>';
 }
-/* 每戶租金成本/月（specs/02 §2.1）：上層合約月租金 × 該戶坪數 ÷ 合約各戶坪數合計；只顯示，不進損益（D-218） */
+/* 每戶租金成本/月（specs/02 §2.1）：合約文件月租金 × 該戶坪數 ÷ 合約各戶坪數合計；只顯示，不進損益（D-218） */
 function houseCost(h) { var k = K(h.contractId); var tot = sum(S.houses.filter(function (x) { return x.contractId === k.id; }), function (x) { return x.ping; }); return tot ? Math.round(curRent(k) * h.ping / tot) : 0; }
 function houseModal(h) {
   var us = S.units.filter(function (u) { return u.houseId === h.id; }); var k = K(h.contractId);
   var kv = function (a, b) { return '<div class="kv"><span>' + a + '</span><span style="text-align:right">' + b + '</span></div>'; };
   modal(esc(h.addr), '<div>' + kv('所屬合約', esc(k.name)) + kv('加入日期', roc(h.join)) + kv('合約迄日（所屬合約文件）', roc(k.end)) + kv('出租單元', us.map(function (u) { return esc(u.name) + '（房號 ' + esc(u.code) + '）'; }).join('、')) +
-    kv('建號', h.buildNo) + kv('樓層', h.floor + ' 樓') + kv('合約坪數', h.ping + ' 坪') + kv('每月租金成本', money(houseCost(h)) + '<br><small class="muted">上層合約目前月租金 × 坪數 ÷ 合約總坪數；分租房屋為整戶的數字（D-218）</small>') + kv('水號／電號／瓦斯', h.water + '／' + h.elec + '／' + h.gas) + kv('管理費', h.mgmt ? money(houseMgmt(h, TODAY)) + '／月（' + mgmtVerText(mgmtVerAt(bldName(h), TODAY)).replace('｜取整：', '，') + '）' : '—') + kv('應投保火險金額', money(h.fire)) + '</div>' +
+    kv('建號', h.buildNo) + kv('樓層', h.floor + ' 樓') + kv('合約坪數', h.ping + ' 坪') + kv('每月租金成本', money(houseCost(h)) + '<br><small class="muted">合約文件目前月租金 × 坪數 ÷ 合約總坪數；分租房屋為整戶的數字（D-218）</small>') + kv('水號／電號／瓦斯', h.water + '／' + h.elec + '／' + h.gas) + kv('管理費', h.mgmt ? money(houseMgmt(h, TODAY)) + '／月（' + mgmtVerText(mgmtVerAt(bldName(h), TODAY)).replace('｜取整：', '，') + '）' : '—') + kv('應投保火險金額', money(h.fire)) + '</div>' +
     '<h3 class="serif" style="font-size:16px;margin:12px 0 4px">土地標的（' + h.land.length + ' 筆）</h3>' + h.land.map(function (x) { return '<div class="kv"><span>' + x.sec + ' ' + x.no + '</span><span>' + x.area + ' ㎡｜權利範圍 ' + x.share + '</span></div>'; }).join('') +
     '<h3 class="serif" style="font-size:16px;margin:12px 0 4px">現況確認（簽約時由主檔帶入）</h3>' + ['消防設施：有滅火器、偵煙器', '滲漏水：無', '輻射屋檢測：無', '海砂屋檢測：無', '非自然死亡情事：無', '供排水：正常', '未登記增建或違建：無', '公寓大廈規約：有，已檢附'].map(function (x) { return '<div class="kv"><span>' + x.split('：')[0] + '</span><span>' + x.split('：')[1] + '</span></div>'; }).join('') + '<p class="muted small">共 12 項，其餘見合約附件；試用版為假資料。</p>', {});
 }
@@ -2522,7 +2522,7 @@ function pReport(code) {
   var back = ['#/reports', '報表'];
   if (code === 'RP-11') {
     var ls = S.leases.filter(function (l) { return l.active; }).sort(function (a, b) { return a.end < b.end ? -1 : 1; }).slice(0, 25);
-    return head('房客租約總表／到期清單', '依租約迄日排序（前 25 筆）', '', back) + '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th>迄日</th><th class="r">剩餘天數</th><th>續約意向</th><th class="hide-mob">上層合約迄日</th></tr></thead><tbody>' +
+    return head('房客租約總表／到期清單', '依租約迄日排序（前 25 筆）', '', back) + '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>單元</th><th>承租人</th><th>迄日</th><th class="r">剩餘天數</th><th>續約意向</th><th class="hide-mob">合約文件迄日</th></tr></thead><tbody>' +
       ls.map(function (l) { var d = diff(TODAY, l.end); return '<tr class="click" data-go="#/unit/' + l.unitId + '"><td>' + uName(l.unitId) + '</td><td>' + esc(l.tenant) + '</td><td class="num">' + roc(l.end) + '</td><td class="r num">' + (d <= remindDays(l) ?'<span class="pill p-amber">' + d + '</span>' : d) + '</td><td>' + l.renew + '</td><td class="num hide-mob">' + roc(kOfUnit(U(l.unitId)).end) + '</td></tr>'; }).join('') + '</tbody></table></div></section>';
   }
   if (code === 'RP-12') {
