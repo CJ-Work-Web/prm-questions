@@ -2050,7 +2050,7 @@ function utilVoidPeriod(why) {
   var recs = S.receivables.filter(function (r) { return (r.item === '水電費' || r.holdOf) && r.month === '2026-09' && !r.voided && (!log || log.recIds.indexOf(r.id) >= 0); });
   recs.forEach(function (r) { voidRecCheck(r, reason); });
   var back = log ? log.settle.map(function (q) { return { s: byId(S.settlements, q.id), q: q }; }).filter(function (z) { return z.s; }) : [];
-  back.forEach(function (z) { if (z.s.refundedDate) throw '退租結算已退款，且用到本期帳單的水電金額，不能作廢期次；差額補退或追收的記帳方式還沒設計（V-70）'; });
+  back.forEach(function (z) { if (z.s.refundedDate) throw '退租結算已退款，且用到本期帳單的水電金額，不能作廢期次；請先對該結算開更正版（水電改回待結清或正確金額），完成差額處理後再作廢期次（D-246）'; });
   recs.forEach(function (r) { voidRecDo(r, '水電分攤期次作廢：' + reason); });
   back.forEach(function (z) { var u = z.s.utils; u.water = z.q.water; u.elec = z.q.elec; if (z.q.billDate == null) delete u.billDate; else u.billDate = z.q.billDate; });
   S.utilVoided = S.utilVoided || [];
@@ -3128,7 +3128,9 @@ function openAction(act, ds) {
     modal('建立續約合約｜' + uName(l.unitId), fld('承租人', inp('tenant', l.tenant, 'readonly')) + '<div class="row2">' + dateFld('start', '新合約起日', ns) + dateFld('end', '新合約迄日', addDays(addMonths(ns, 12), -1)) + '</div>' + dateFld('signd', '簽約日（承租人簽名日）', TODAY) +
       '<div class="row2">' + fld('新月租金', inp('rent', l.rent, 'inputmode="numeric"'), '主管口頭同意的金額（D-082）') + fld('每月繳款日', inp('due', l.dueDay, 'inputmode="numeric"'), '1～31；遇小月取月底（CR-46）') + '</div>' +
       '<p class="muted small">原租金 ' + money(l.rent) + '、押金 ' + money(l.deposit) + '。押金直接轉入新約：新租金較高補收差額、較低退還差額（押金維持新租金 2 個月）。續約不重新拍照、抄錶；保證人與簽約資料沿用；完成時一併產生新約的合約電子檔（RP-18）。</p>' + fld('特約條款（選填）', '<textarea name="special">' + esc(l.special || '') + '</textarea>', '沿用舊約內容，可修改（D-155）') + (l.exempt ? '<label class="fld inline"><input type="checkbox" name="exconf"><span>確認沿用「無保人無擔保」（原因：' + esc(l.exempt.why) + '）；限管理者確認（D-228）</span></label>' : ''), {
-      sub: '舊約迄日 ' + roc(l.end) + '，新約依簽約日建立申報待辦（續約最容易漏申報）', submit: '建立續約並產生合約電子檔', onSubmit: function (f) {
+      sub: '舊約迄日 ' + roc(l.end) + '，簽約日今天或更早，簽約後建立申報待辦；簽約日晚於今天，簽約日當天才建（D-224；續約最容易漏申報）', submit: '建立續約並產生合約電子檔', onSubmit: function (f) {
+        if (!l.active) throw '此租約不是生效中的租約（已續約或已結束），不能再建立續約合約（V-107）';
+        if (l.renew !== '續約') throw '續約意向不是「續約」（目前：' + l.renew + '），請先在單戶頁或紙本文件傳遞登錄詢問結果為「續約」（D-082、B-57）';
         if (l.exempt) { if (!isAdmin()) throw '此租約為「無保人無擔保」，續約限管理者操作（D-228）'; if (!f.exconf) throw '請勾選確認沿用「無保人無擔保」，或先到單戶頁「簽約資料」變更擔保方式'; }
         var s = needDate(f.start, '新合約起日'); var e = needDate(f.end, '新合約迄日'); if (e <= s) throw '迄日要晚於起日'; if (s <= l.start) throw '新合約起日要晚於舊合約起日'; var sd = needDate(f.signd, '簽約日');   /* 可選未來日期（D-220） */
         var rent = needInt(f.rent, '新月租金'); var due = needDue(f.due);
@@ -3140,7 +3142,7 @@ function openAction(act, ds) {
         if (gap > 0) S.receivables.push({ id: uid('rv'), leaseId: nl.id, item: '押金差額補收', month: s.slice(0, 7), due: s, amount: gap, paid: 0 });
         S.contacts.push({ id: uid('k'), leaseId: nl.id, date: TODAY, kind: '續約', text: '續約 ' + roc(s) + '–' + roc(e) + '，月租 ' + money(rent) + '；押金 ' + money(l.deposit) + ' 轉入新約' + (gap > 0 ? '，補收差額 ' + money(gap) : gap < 0 ? '，退還差額 ' + money(-gap) : '') + (nl.exempt ? '；管理者確認沿用「無保人無擔保」（陳經理）' : '') });
         addFilings(nl); var ef = genEfile(nl);
-        return (sd > s ? '注意：簽約日晚於起租日，主管機關必查；' : '') + '已建立續約合約' + (gap > 0 ? '，押金差額 ' + money(gap) + ' 列入應收' : gap < 0 ? '，要退還押金差額 ' + money(-gap) : '') + '；申報待辦 2 筆' + ef;
+        return (sd > s ? '注意：簽約日晚於起租日，主管機關必查；' : '') + '已建立續約合約' + (gap > 0 ? '，押金差額 ' + money(gap) + ' 列入應收' : gap < 0 ? '，要退還押金差額 ' + money(-gap) : '') + '；' + (nl.filingsPending ? '申報待辦於簽約日 ' + roc(sd) + ' 當天建立（D-224）' : '申報待辦 2 筆') + ef;
       } });
   } else if (act === 'efile-fix') {
     var blk = efileFixBlock(l); if (blk) { toast(blk); return; }
@@ -3231,7 +3233,7 @@ function openAction(act, ds) {
       (H(u.houseId).mgmt ? '<div class="row2">' + fld('管理費', sel('mgmtMode', ['另計', '含租金']), '另計＝房客另繳、另立應收；含租金＝不另收，由公司代繳（specs/05 §4.1）') + fld('管理費金額／月', inp('mgmt', houseMgmt(H(u.houseId), start), 'inputmode="numeric"'), '依合約起日的案場設定預填，可改（D-190、D-221）') + '</div>' : '') +
       (u.caseId === 'c3' ? '<div class="row2">' + fld('實際入住人數', sel('occ', ['1', '2'])) + '<span></span></div>' : '') +
       fld('特約條款（選填）', '<textarea name="special" placeholder="範本以外的約定"></textarea>', '印在合約電子檔條文最後（D-155）'), {
-      sub: (res ? '訂金 ' + money(res.amount) + ' 會轉入首期款項。' : '') + '簽約後依簽約日建立 2 筆申報待辦（期限＝簽約日＋30 天）；完成時一併產生合約電子檔（RP-18）；缺少的簽約資料可於簽約後補登', submit: '完成簽約並產生合約電子檔', onSubmit: function (f) {
+      sub: (res ? '訂金 ' + money(res.amount) + ' 會轉入首期款項。' : '') + '申報待辦 2 筆，期限＝簽約日＋30 天（簽約日今天或更早：簽約後建立 2 筆申報待辦；簽約日晚於今天：簽約日當天才建，D-224）；完成時一併產生合約電子檔（RP-18）；缺少的簽約資料可於簽約後補登', submit: '完成簽約並產生合約電子檔', onSubmit: function (f) {
         var t = needText(f.tenant, '承租人稱呼'); var ph = needText(f.phone, '電話'); var s = needDate(f.start, '合約起日'); var e = needDate(f.end, '合約迄日'); if (e <= s) throw '合約迄日要晚於起日'; var sd = needDate(f.signd, '簽約日');   /* 簽約日可選未來日期，業務確定簽約日時可提早填（D-220） */
         var rent = needInt(f.rent, '月租金'); var due = needDue(f.due); var rmd = String(f.remind == null ? '' : f.remind).trim() === '' ? DEFAULT_REMIND : needRemind(f.remind); var ho =f.handover ? needDate(f.handover, '實際點交日') : s; var prO = lastRentedEnd(u); if (prO && ho < prO) throw '實際點交日不能早於前一份租約的退租日期 ' + roc(prO) + '（同日退租又入住時，新約自次日起算已出租，D-181）';
         var hasG = String(f.gname || '').trim();
