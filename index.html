@@ -68,13 +68,24 @@
 <body>
 <div class="page">
   <h1>PRM System 規格確認 — 待確認問題單（可填寫）</h1>
-  <div class="meta">2026-10-12 更新（「退租後實際水電費超過預扣金額」已回覆，移出）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
+  <div class="meta">2026-10-14 更新（新增「匯入正航收款紀錄的四個問題」）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
 
   <div class="toolbar">
     <label>填寫人：<input id="writer" data-save="writer" placeholder="請輸入姓名"></label>
     <button onclick="exportAnswers('copy')">複製全部回覆</button>
     <button class="secondary" onclick="exportAnswers('download')">匯出回覆（下載檔案）</button>
     <span class="hint">填寫內容會自動暫存在這台裝置的瀏覽器裡，關閉再開不會消失。填完請按「複製全部回覆」，貼到 LINE 或 email 傳回給發單人（電腦上也可改用「匯出回覆」下載檔案）。</span>
+  </div>
+  <div class="qcard" data-q="Q-039" data-title="匯入正航收款紀錄的四個問題">
+    <div class="qhead"><span><span class="qid">Q-039</span><span class="qtitle">匯入正航收款紀錄的四個問題</span></span><span class="assign">指派給：<input data-save="asg-Q-039" value="會計" readonly></span></div>
+    <div class="ctx">背景：系統之後不自己核對收款。會計在正航銷帳後，定期匯出「已收帳款明細表」給系統匯入，系統用它沖銷房客的應收。</div>
+    <ol>
+      <li>水電費、清潔費在正航有沒有開銷貨單（應收）？還是只有租金開，水電、清潔費記在收款單的「自設金額」？</li>
+      <li>收款單的「收款日期」是錢進銀行的日期，還是會計處理的日期？（系統要用它算遲繳天數）</li>
+      <li>多久可以匯出一次？能不能匯出沒有小計列、一筆收款一列的清單？</li>
+      <li>客戶編號後面的 -00、-01 代表什麼（例：同一間房的第幾任房客）？房客簽約前先付的訂金，入帳時用哪個客戶編號？</li>
+    </ol>
+    <textarea class="ans" data-save="ans-Q-039" placeholder="回覆…"></textarea>
   </div>
   <div class="qcard" data-q="Q-061" data-title="契約頁的坪數篩選要分哪幾個級距">
     <div class="qhead"><span><span class="qid">Q-061</span><span class="qtitle">契約頁的坪數篩選要分哪幾個級距</span></span><span class="assign">指派給：<input data-save="asg-Q-061" value="全員" readonly></span></div>
