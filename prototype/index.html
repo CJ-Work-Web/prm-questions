@@ -1627,23 +1627,39 @@ function kLabel(caseId) { var ks = S.contracts.filter(function (k) { return k.ca
 function caseSites(caseId) { var m = {}; S.houses.filter(function (h) { return h.caseId === caseId; }).forEach(function (h) { m[bldName(h)] = 1; }); return Object.keys(m); }
 /* ================= 契約頁（D-146）：每個出租單元一列，依案場／上層合約／狀態篩選 ================= */
 /* 篩選只存在本瀏覽器（S.cf），不共用；同一條件內任一符合、不同條件同時符合 */
-var CF_KEYS = ['site', 'kase', 'st'];
+var CF_KEYS = ['site', 'kase', 'st', 'ping'];
+/* 坪數篩選（D-307）：只有設定了分組的案場才有。分組存在案場上；nos＝適用的門牌號（其他棟不列入任何一組）；分界下界含、上界不含，null＝不設限。
+   示範用假案場：河濱新城東棟（88 號）分 10／16／24 坪，西棟（90 號）不列入 */
+var PING_SITES = { '河濱新城': { nos: ['88'], groups: [{ name: '10 坪', lo: null, hi: 13 }, { name: '16 坪', lo: 13, hi: 20 }, { name: '24 坪', lo: 20, hi: null }] } };
+function pingGroupOf(h) {
+  var cfg = h && PING_SITES[bldName(h)]; if (!cfg) return null;
+  var m = /路 (\d+) 號/.exec(h.addr || ''); if (!m || cfg.nos.indexOf(m[1]) < 0) return null;
+  var p = h.ping; if (typeof p !== 'number' || !isFinite(p)) return null;
+  for (var i = 0; i < cfg.groups.length; i++) { var g = cfg.groups[i]; if ((g.lo === null || p >= g.lo) && (g.hi === null || p < g.hi)) return g.name; }
+  return null;
+}
+function cfPingSites(f) { return f.site.filter(function (s) { return PING_SITES[s]; }); }   /* 已選案場裡有分組設定的；空的＝不顯示坪數篩選、坪數條件不生效 */
 var CF_OPEN = null;   /* 剛勾選的下拉清單保持展開（重畫後不收起），只存在記憶體 */
 var CF_NS = ['cf', 'bf', 'f12', 'f19'];   /* 契約頁、帳務頁、RP-12、RP-19 各存各的（D-297）；不認得的名稱一律當契約頁 */
 function cfNs(ns) { return CF_NS.indexOf(ns) >= 0 ? ns : 'cf'; }
 function cfAttr(ns) { return cfNs(ns) === 'cf' ? '' : ' data-ns="' + cfNs(ns) + '"'; }
-function cfCur(ns) { var f = S[cfNs(ns)] || {}; return { site: f.site || [], kase: f.kase || [], st: f.st || [], q: f.q || '' }; }
+function cfCur(ns) { var f = S[cfNs(ns)] || {}; return { site: f.site || [], kase: f.kase || [], st: f.st || [], ping: f.ping || [], q: f.q || '' }; }
 function cfToggle(k, v, ns) {
   if (CF_KEYS.indexOf(k) < 0) return;
+  if (k === 'ping' && cfNs(ns) !== 'cf') return;   /* 坪數只有契約頁有 */
   var f = cfCur(ns); var a = f[k].slice(); var i = a.indexOf(v);
   if (i >= 0) a.splice(i, 1); else a.push(v);
-  f[k] = a; S[cfNs(ns)] = f;
+  f[k] = a;
+  if (k === 'site' && !cfPingSites(f).length) f.ping = [];   /* 不再選有分組的案場，已選的坪數一起清掉 */
+  S[cfNs(ns)] = f;
 }
 function unitSite(u) { return bldName(H(u.houseId)); }
 /* 案場與上層合約篩選後的單元（狀態分布用，不受狀態篩選影響） */
+function cfPingOn(f) { return !!(f.ping.length && cfPingSites(f).length); }   /* 殘留的坪數條件（沒選有分組的案場）不生效 */
 function cfScope(f) {
+  var pingOn = cfPingOn(f);
   return S.units.filter(function (u) {
-    return (!f.site.length || f.site.indexOf(unitSite(u)) >= 0) && (!f.kase.length || f.kase.indexOf(u.caseId) >= 0);
+    return (!f.site.length || f.site.indexOf(unitSite(u)) >= 0) && (!f.kase.length || f.kase.indexOf(u.caseId) >= 0) && (!pingOn || f.ping.indexOf(pingGroupOf(H(u.houseId))) >= 0);
   });
 }
 /* 清單：三個條件都套用；有租約的依迄日由近到遠，空置單元排在後面（維持原順序） */
@@ -1668,6 +1684,11 @@ function unitFlags(u, l) {
 var CF_Q = {};        /* 各下拉清單的查詢字，只存在記憶體 */
 function cfOpts(k, ns) {
   if (k === 'site') return siteList().map(function (x) { return { v: x.name, label: x.name }; });
+  if (k === 'ping') {   /* 已選案場裡有分組設定的案場，列它們的分組（同名只列一次） */
+    var seen = {}, out = [];
+    cfPingSites(cfCur(ns)).forEach(function (s) { PING_SITES[s].groups.forEach(function (g) { if (!seen[g.name]) { seen[g.name] = 1; out.push({ v: g.name, label: g.name }); } }); });
+    return out;
+  }
   var f = cfCur(ns);   /* 上層合約只列已選案場內有房屋的合約；已勾的照列，才能取消（D-221） */
   return S.cases.filter(function (c) { return !f.site.length || f.kase.indexOf(c.id) >= 0 || S.units.some(function (u) { return u.caseId === c.id && f.site.indexOf(unitSite(u)) >= 0; }); }).map(function (c) { return { v: c.id, label: c.name }; });
 }
@@ -1700,20 +1721,20 @@ function pCases() {
   var f = cfCur(); var scope = cfScope(f);
   var cnt = { '已出租': 0, '招租中': 0, '整備中': 0, '特殊狀況': 0 }; scope.forEach(function (u) { cnt[u.status]++; });
   var vac = cnt['招租中'] + cnt['已出租'] ? cnt['招租中'] / (cnt['招租中'] + cnt['已出租']) : null;
-  var list = cfList(f); var any = f.site.length || f.kase.length || f.st.length;
+  var list = cfList(f); var pingOn = cfPingOn(f); var any = f.site.length || f.kase.length || f.st.length;
   var lbl = function (t) { return '<span class="muted small" style="min-width:56px">' + t + '</span>'; };
   var filters = '<div class="cfbar">' +
-    cfDrop('site', '案場') + cfDrop('kase', '上層合約') +
+    cfDrop('site', '案場') + cfDrop('kase', '上層合約') + (cfPingSites(f).length ? cfDrop('ping', '坪數') : '') +
     (any ? '<button class="btn sm ghost" data-act="cf-clear" style="height:40px">清除篩選</button>' : '') + '<div class="cfsearch">' + searchBox(true) + '</div></div>';
-  var dist = '<section class="card pad col" style="margin-bottom:14px"><div class="grid2"><div class="fact"><span>' + (f.site.length || f.kase.length ? '篩選範圍的出租單元' : '全部出租單元') + '</span><b>' + scope.length + ' 間</b></div><div class="fact"><span>招租空置率（今天）</span><b>' + (vac === null ? '—' : Math.round(vac * 100) + '%') + '</b></div></div>' +
+  var dist = '<section class="card pad col" style="margin-bottom:14px"><div class="grid2"><div class="fact"><span>' + (f.site.length || f.kase.length || pingOn ? '篩選範圍的出租單元' : '全部出租單元') + '</span><b>' + scope.length + ' 間</b></div><div class="fact"><span>招租空置率（今天）</span><b>' + (vac === null ? '—' : Math.round(vac * 100) + '%') + '</b></div></div>' +
     (scope.length ? distbar(cnt) : '') +
     '<div class="filt" style="align-items:center;margin:0">' + lbl('狀態') + ['已出租', '招租中', '整備中', '特殊狀況'].map(function (s) { return cfChip('st', s, '<i class="dot" style="background:var(--s-' + SC[s] + ');margin-right:6px"></i>' + s + ' ' + cnt[s], f.st.indexOf(s) >= 0); }).join('') + '</div>' +
-    '<p class="muted small" style="margin:0">狀態分布依案場與上層合約篩選；點狀態可篩選清單（可複選），分布不隨狀態篩選改變。招租空置率＝招租中 ÷（招租中＋已出租），期間統計見 <a href="#/report/RP-19">RP-19 空置率</a>。</p></section>';
+    '<p class="muted small" style="margin:0">狀態分布依案場、上層合約' + (cfPingSites(f).length ? '、坪數' : '') + '篩選；點狀態可篩選清單（可複選），分布不隨狀態篩選改變。招租空置率＝招租中 ÷（招租中＋已出租），期間統計見 <a href="#/report/RP-19">RP-19 空置率</a>。</p></section>';
   var dash = '<span class="muted">—</span>';
   var rows = list.map(function (x) {
     var u = x.u, l = x.l;
     var fl = unitFlags(u, l).join(' ');
-    return '<tr class="click" data-go="#/unit/' + u.id + '"><td><a class="rowlink" href="#/unit/' + u.id + '">' + uName(u.id) + '</a>' + (u.status !== '已出租' ? ' ' + chip(u.status) : '') + '<br><small class="muted">' + esc(unitSite(u)) + '</small>' + (fl ? '<div class="only-mob" style="margin-top:4px">' + fl + '</div>' : '') + '</td>' +
+    return '<tr class="click" data-go="#/unit/' + u.id + '"><td><a class="rowlink" href="#/unit/' + u.id + '">' + uName(u.id) + '</a>' + (u.status !== '已出租' ? ' ' + chip(u.status) : '') + '<br><small class="muted">' + esc(unitSite(u)) + (pingGroupOf(H(u.houseId)) ? '・' + H(u.houseId).ping + ' 坪' : '') + '</small>' + (fl ? '<div class="only-mob" style="margin-top:4px">' + fl + '</div>' : '') + '</td>' +
       '<td style="white-space:nowrap">' + (l ? esc(l.tenant) : dash) + '</td><td class="num" style="white-space:nowrap;padding-right:32px">' + (l ? money(l.rent) : dash) + '</td><td class="num">' + (l ? roc(l.start) + '–<wbr>' + roc(l.end) : dash) + '</td><td class="hide-mob">' + fl + '</td></tr>';
   }).join('');
   return head('契約', S.units.length + ' 間出租單元｜每個單元一列，最快到期的在最上面；點單元進單戶頁', '', null, true) + filters + dist +
