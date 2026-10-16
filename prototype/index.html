@@ -1729,7 +1729,7 @@ function pCases() {
   var dist = '<section class="card pad col" style="margin-bottom:14px"><div class="grid2"><div class="fact"><span>' + (f.site.length || f.kase.length || pingOn ? '篩選範圍的出租單元' : '全部出租單元') + '</span><b>' + scope.length + ' 間</b></div><div class="fact"><span>招租空置率（今天）</span><b>' + (vac === null ? '—' : Math.round(vac * 100) + '%') + '</b></div></div>' +
     (scope.length ? distbar(cnt) : '') +
     '<div class="filt" style="align-items:center;margin:0">' + lbl('狀態') + ['已出租', '招租中', '整備中', '特殊狀況'].map(function (s) { return cfChip('st', s, '<i class="dot" style="background:var(--s-' + SC[s] + ');margin-right:6px"></i>' + s + ' ' + cnt[s], f.st.indexOf(s) >= 0); }).join('') + '</div>' +
-    '<p class="muted small" style="margin:0">狀態分布依案場、上層合約' + (cfPingSites(f).length ? '、坪數' : '') + '篩選；點狀態可篩選清單（可複選），分布不隨狀態篩選改變。招租空置率＝招租中 ÷（招租中＋已出租），期間統計見 <a href="#/report/RP-19">RP-19 空置率</a>。</p></section>';
+    '<p class="muted small" style="margin:0">狀態分布依案場、上層合約' + (cfPingSites(f).length ? '、坪數' : '') + '篩選；點狀態可篩選清單（可複選），分布不隨狀態篩選改變。招租空置率＝招租中 ÷（招租中＋已出租），期間統計見 <a href="#/report/RP-19">RP-19 空置率</a>。坪數篩選只在選了有分組設定的案場（示範資料：河濱新城）後才出現（D-307）。</p></section>';
   var dash = '<span class="muted">—</span>';
   var rows = list.map(function (x) {
     var u = x.u, l = x.l;
