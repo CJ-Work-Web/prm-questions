@@ -2665,8 +2665,8 @@ function leaseFixPlan(l, nrent, nend, nmgmt) {
 /* 修正租約押金金額（B-45）：只有「完全未收」的押金應收可以作廢重開；已收的要走擔保金帳沖正（D-245），任何角色都不能在修正視窗改 */
 function depFixPlan(l, ndep) {
   var rs = leaseRecs(l.id).filter(function (r) { return r.item === '租約押金'; });
-  if (rs.length !== 1) throw '找不到唯一一筆租約押金的應收記錄（舊約轉入或有多筆），不能在修正視窗改；請管理者到擔保金帳沖正再重登（D-245、B-45）';
-  if (rs[0].paid > 0) throw '租約押金已收 ' + money(rs[0].paid) + '，不能在修正視窗改；請管理者到擔保金帳沖正再重登（D-245、B-45）';
+  if (rs.length !== 1) throw '找不到唯一一筆租約押金的應收記錄（舊約轉入或有多筆），不能在修正視窗改；請管理者到擔保金帳沖正（系統會建押金補足應收，收款補回；D-245、B-45、D-325）';
+  if (rs[0].paid > 0) throw '租約押金已收 ' + money(rs[0].paid) + '，不能在修正視窗改；請管理者到擔保金帳沖正（系統會建押金補足應收，收款補回；D-245、B-45、D-325）';
   return { old: rs[0], nw: { id: uid('rv'), leaseId: l.id, item: '租約押金', month: rs[0].month, due: rs[0].due, amount: ndep, paid: 0 } };
 }
 /* 改繳款日（D-251，生效月制）：生效月起尚未結清（含部分收款）的租金、管理費應收只改應繳日；已結清、生效月之前、起租當月（應繳日＝合約起日）、已開立的滯納金都不動 */
@@ -2797,7 +2797,7 @@ function depRevert(l, rowId, why) {
   var reason = needText(why, '沖正原因');
   var row = first(depLedger(l), function (x) { return x.id === rowId; });
   if (!row) throw '找不到這筆擔保金帳異動';
-  if (row.type === '沖正') throw '沖正筆本身不得再沖正（B-41）；要改就重登';
+  if (row.type === '沖正') throw '沖正筆本身不得再沖正（B-41）；收取要補回走押金補足應收（D-325）';
   if (row.reversed) throw '這筆已沖正，不得再沖正（B-41）';
   if (row.sys) throw '系統交易產生的異動（' + row.type + '）不得單筆沖正（B-41）；續約轉入只能經「撤銷續約」或「續約押金調整」，試用版沒有這兩個入口';
   if (settleSigned(l.id)) throw '該租約的退租結算已簽名或已退款，擔保金帳不能沖正；要改請開更正版（D-245、D-246）';
@@ -2808,7 +2808,13 @@ function depRevert(l, rowId, why) {
   l.depUsed = l.depUsed || [];
   l.depUsed.push({ id: uid('du'), type: '沖正', target: row.id, amount: row.delta, recId: row.recId || null, date: TODAY, by: isAdmin() ? '陳經理' : '小林', reason: reason });
   S.contacts.push({ id: uid('k'), leaseId: l.id, date: TODAY, kind: '其他', text: '沖正擔保金帳「' + row.type + '」' + money(Math.abs(row.delta)) + '（' + reason + '）' });
-  return '已沖正「' + row.type + '」，另開一筆金額相反的沖正異動，原筆標已沖正；押金帳餘額 ' + money(depBalance(l) - (l.deco || 0));
+  /* 沖正「收取」後押金帳歸零：自動建同額「押金補足」應收（預收可沖入、補足後押金帳回復），租約畫面顯示擔保金不足警示 */
+  var fillMsg = '';
+  if (row.type === '收取' && row.delta > 0) {
+    pushRec({ id: uid('rv'), leaseId: l.id, item: '押金補足', month: TODAY.slice(0, 7), due: TODAY, amount: row.delta, paid: 0, src: '擔保金帳沖正', note: '沖正擔保金帳「收取」後自動建立：押金帳少了 ' + money(row.delta) + '，收款補足後押金帳回復' });
+    fillMsg = '；已建「押金補足」應收 ' + money(row.delta) + '（收款或預收沖入後，押金帳回復）';
+  }
+  return '已沖正「' + row.type + '」，另開一筆金額相反的沖正異動，原筆標已沖正；押金帳餘額 ' + money(depBalance(l) - (l.deco || 0)) + fillMsg;
 }
 function depLedgerModal(l) {
   var rows = depLedger(l);
@@ -2834,6 +2840,8 @@ function pUnit(id) {
   if (l) {
     var open = leaseOpen(l.id); var ar = arrearsOf(l);
     if (l.term) top = '<div class="warnbox o-top">' + ic('alert', 20, 2) + '<span>已約定<b>提前終止</b>：終止日 ' + roc(l.term.date) + '（' + esc(l.term.type) + '）。終止日當天做退租點交。</span></div>';
+    var depGap = l.deposit - (depBalance(l) - (l.deco || 0));
+    if (depGap > 0 && !settleSigned(l.id)) top += '<div class="warnbox o-top">' + ic('alert', 20, 2) + '<span><b>擔保金不足 ' + money(depGap) + '</b>：押金帳餘額 ' + money(depBalance(l) - (l.deco || 0)) + '，合約押金 ' + money(l.deposit) + '。' + (leaseRecs(l.id).some(function (r) { return r.item === '押金補足' && openAmt(r) > 0; }) ? '已有「押金補足」應收，收款或用預收沖銷後回復。' : '目前沒有「押金補足」應收，請到擔保金帳確認。') + '</span></div>';
     summary = '<section class="card pad col o-sum" aria-label="承租人">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><div class="muted small">承租人' + (l.source === '續約' ? '（續約）' : '') + '</div><div style="font-size:19px;font-weight:500">' + esc(l.tenant) + '</div></div>' +
       '<div style="text-align:right"><div class="muted small">連絡電話</div><div class="num" style="font-size:17px">' + esc(l.phone) + '</div></div></div>' +
@@ -3955,7 +3963,7 @@ function openAction(act, ds) {
     var blk = efileFixBlock(l); if (blk) { toast(blk); return; }
     modal('修正並重新產出｜' + uName(l.unitId), (l.guarantor ? '<div class="row2">' + fld('連帶保證人', inp('gname', l.guarantor.name)) + fld('保證人電話', inp('gphone', l.guarantor.phone, 'inputmode="tel"')) + '</div>' : '') +
       '<div class="row2">' + fld('月租金', inp('rent', l.rent, 'inputmode="numeric"'), '目前 ' + money(l.rent) + '。改了會把租金應收作廢重開；押金（' + money(l.deposit) + '）不自動連動（D-247）') + dateFld('end', '合約迄日', l.end) + '</div>' +
-      '<div class="row2">' + (l.mgmtMode === '另計' && l.mgmt ? fld('管理費金額／月', inp('mgmt', l.mgmt, 'inputmode="numeric"'), '簽約時登錯才改這裡，管理費應收從起租月起作廢重開；管委會調費請用管理費調整（D-190、D-251）') : '') + (l.deposit ? fld('租約押金', inp('deposit', l.deposit, 'inputmode="numeric"'), '完全未收才能改；已收的請管理者到擔保金帳沖正再重登（D-245、B-45）') : '') + '</div>' +
+      '<div class="row2">' + (l.mgmtMode === '另計' && l.mgmt ? fld('管理費金額／月', inp('mgmt', l.mgmt, 'inputmode="numeric"'), '簽約時登錯才改這裡，管理費應收從起租月起作廢重開；管委會調費請用管理費調整（D-190、D-251）') : '') + (l.deposit ? fld('租約押金', inp('deposit', l.deposit, 'inputmode="numeric"'), '完全未收才能改；已收的請管理者到擔保金帳沖正（系統會建押金補足應收，收款補回；D-245、B-45、D-325）') : '') + '</div>' +
       '<div class="row2">' + fld('每月繳款日', inp('due', l.dueDay, 'inputmode="numeric"'), '改了之後，生效月之前的帳務仍用舊日；生效月起未結清的應收只改應繳日，不動金額（D-251）') + fld('新繳款日從哪個月起適用', dueFromSel(l), '只在改繳款日時使用；上限＝下個月') + '</div>' +
       fld('特約條款（選填）', '<textarea name="special" placeholder="範本以外的約定，例：乙方得飼養小型寵物一隻">' + esc(l.special || '') + '</textarea>', '印在條文最後；範本其他條文不能逐約修改（D-155）') +
       fld('修正原因（必填）', '<textarea name="why" placeholder="例：簽約當下約定可養寵物"></textarea>') +
@@ -4229,7 +4237,7 @@ document.addEventListener('click', function (e) {
     var drl = L(ds.l), drow = first(depLedger(drl), function (x) { return x.id === ds.id; }); if (!drow) { toast('找不到這筆擔保金帳異動'); return; }
     modal('沖正｜' + uName(drl.unitId), '<p>沖正「' + drow.type + '」' + money(Math.abs(drow.delta)) + '：另開一筆金額相反的異動，原筆保留、標「已沖正」。' + (drow.type === '催繳抵扣' ? '被抵扣的應收回到未沖。' : '') + '</p>' + fld('沖正原因（必填）', '<textarea name="why" placeholder="例：金額登錯"></textarea>'), { sub: '限管理者；沖正後餘額不得為負（B-41）', submit: '確定沖正', onSubmit: function (f) { return depRevert(drl, drow.id, f.why); } }); return;
   }
-  if (act === 'ledger-tab') { ledgerModal(L(ds.l), ds.t); return; }
+  if (act === 'ledger-tab') { e.preventDefault(); ledgerModal(L(ds.l), ds.t); return; }
   if (act === 'payable-paid') { var p = byId(S.payables, ds.id); modal('登錄已付款', '<p>' + esc(p.payee) + '｜' + esc(p.period) + '｜' + money(p.amount) + '</p>' + dateFld('date', '付款日', TODAY), { submit: '登錄', onSubmit: function (f) { p.paidDate = needDate(f.date, '付款日'); return '已登錄付款'; } }); return; }
   if (act === 'filing-done') { var fdo = byId(S.filings, ds.id); modal('標記已辦｜' + fdo.type, '<p>' + uName(fdo.unitId) + '｜簽約日 ' + roc(fdo.signDate) + '</p>' + dateFld('date', '辦理日', TODAY) + fld('回執編號（選填）', inp('receipt', '')), { submit: '標記已辦', onSubmit: function (f) { fdo.doneDate = needDate(f.date, '辦理日'); fdo.receipt = f.receipt || ''; fdo.status = '已辦'; return '已標記已辦'; } }); return; }
   if (act === 'filing-skip') { var fsk = byId(S.filings, ds.id); modal('決定不申報｜' + fsk.type, '<p>' + uName(fsk.unitId) + '</p>' + fld('理由（必填）', '<textarea name="reason" placeholder="例：屬豁免情形（說明依據）"></textarea>', '不需主管核准，但理由必填（D-066）'), { submit: '確定', onSubmit: function (f) { fsk.reason = needText(f.reason, '理由'); fsk.status = '不申報'; return '已記錄不申報與理由'; } }); return; }
