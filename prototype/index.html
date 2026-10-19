@@ -415,7 +415,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 var TODAY = '2026-10-05';
 var FILING_ALERT_DAYS = 10;   /* 申報剩幾天標紅（D-254；原 7 天，OV-226） */
 var STALE_DAYS = 30;          /* 單元狀態超過幾天沒更新就提醒（D-254；原暫定 60 天） */
-var KEY = 'prm-prototype-v37';   /* v37：示範資料加僅管理案件「楓林巷」（D-312，2026-10-18）；v36：期初轉入的租約（D-322） */
+var KEY = 'prm-prototype-v38';   /* v38：示範資料加訂金收據（RP-09）、裝潢保證金收據（RP-10）產出紀錄（D-153，2026-10-19）；v37：示範資料加僅管理案件「楓林巷」（D-312，2026-10-18）；v36：期初轉入的租約（D-322） */
 var S = null;
 var UPGRADED = false;   /* 資料版本升級後舊試用資料被丟棄：開頁時明講，不靜默清空 */
 var $ = function (sel) { return document.querySelector(sel); };
@@ -704,6 +704,7 @@ function seed() {
   /* 戶籍地址（D-236）：存在承租人當事人資料 party.addr；種子資料原本只有「已齊備」旗標，這裡轉成假地址（全為示意） */
   st.leases.forEach(function (l) { if (!l.party) l.party = { idNo: '', addr: '', caddr: '' }; if (l.docs && l.docs.addr) l.party.addr = '示意市示意區示意路 ' + (l.id.replace(/\D/g, '') || '0') + ' 號'; if (l.docs) delete l.docs.addr; if (l.guarantor && l.party.addr && !l.guarantor.addr) l.guarantor.addr = l.party.addr.replace('路', '街'); });
   st.leases.forEach(function (l) { if (l.active && l.docs.efile) st.reportRuns.push(efileRun(st, l, addDays(l.signDate, -3), 'rr' + (st.reportRuns.length + 1))); });
+  st.leases.forEach(function (l) { if (l.active && l.docs.efile && l.deco > 0) st.reportRuns.push(receiptRun(st, 'RP-10', l, addDays(l.signDate, -3), 'rr' + (st.reportRuns.length + 1))); });   /* 裝潢保證金收據（RP-10）：有裝潢保證金的系統產出租約各一筆 */
   st.leases.forEach(function (l) { if (l.active && !l.docs.efile) l.imported = true; });   /* 舊約轉入旗標（D-234）：不要求系統產出電子檔 */
   a98.special = '乙方得飼養小型寵物一隻，退租時負責清潔與除蟲。'; st.reportRuns.push(efileRun(st, a98, a98.signDate, 'rr' + (st.reportRuns.length + 1), '簽約當下約定可飼養小型寵物'));
   st.payables = [
@@ -723,6 +724,7 @@ function seed() {
   st.importBatches[2].n.add = impPays.length;
   var rl = leaseOf('c1', 'A-6-3');
   st.reservations.push({ id: 'r3', unitId: rl.unitId, leaseId: rl.id, payer: rl.tenant, phone: '09xx-xxx-905', amount: 14000, date: '2026-09-20', holdUntil: '2026-09-27', status: '已轉簽約' });
+  st.reservations.forEach(function (r) { st.reportRuns.push(receiptRun(st, 'RP-09', r, r.date, 'rr' + (st.reportRuns.length + 1))); });   /* 訂金收據（RP-09）：每筆收訂各一筆 */
   st.contacts.push({ id: 'k1', leaseId: b72.id, date: '2026-09-03', kind: '催繳', text: '電話未接，已傳訊息提醒 8 月租金' });
   st.contacts.push({ id: 'k2', leaseId: b72.id, date: '2026-09-28', kind: '催繳', text: '房客表示月底前補繳' });
   /* 紙本文件傳遞（D-243、D-248）：案場預設交付對象、傳遞紀錄示範（全為示意） */
@@ -2559,6 +2561,37 @@ function efileRun(st, l, date, id, reason) {
 function genEfile(l) { S.reportRuns = S.reportRuns || []; S.reportRuns.push(efileRun(S, l, TODAY, uid('rr'))); l.docs.efile = true; return '；已產生合約電子檔（RP-18），重印可從單戶頁「契約本文」下載'; }
 /* 同一份租約的各版產出紀錄，舊到新（第 1 版＝第一次產出；產出紀錄只新增不修改，D-153） */
 function efileRuns(l) { return (S.reportRuns || []).filter(function (x) { return x.rp === 'RP-18' && x.leaseId === l.id; }); }
+/* 收據類對外文件（RP-09 訂金收據、RP-10 裝潢保證金收據）的產出紀錄：存產出當時的欄位值，只新增不修改（D-153、B-10）；
+   不存電話與證號（D-284、D-306）。ref＝訂金紀錄或租約。回看顯示紀錄內容；與目前資料不同時逐欄標出差異（D-153 第 2 點） */
+var RCPT = {
+  'RP-09': { name: '訂金收據', key: 'resId', labels: { payer: '付訂人', amount: '訂金金額', room: '租賃標的物', addr: '房屋地址', holdUntil: '訂金保留期限' } },
+  'RP-10': { name: '裝潢保證金收據', key: 'leaseId', labels: { tenant: '承租戶', amount: '保證金金額', room: '房屋標的', addr: '房屋地址' } }
+};
+function receiptVals(st, rp, ref) {
+  var co = st.company;
+  var u = first(st.units, function (x) { return x.id === ref.unitId; }); var h = first(st.houses, function (x) { return x.id === u.houseId; });
+  if (rp === 'RP-09') return { payer: ref.payer, amount: ref.amount, room: u.code, addr: h.addr, holdUntil: ref.holdUntil, lessor: co.name };
+  return { tenant: ref.tenant, amount: ref.deco || 0, room: u.code, addr: h.addr, lessor: co.name };
+}
+function receiptRun(st, rp, ref, date, id) {
+  var o = { id: id, rp: rp, date: date, by: st.role === 'admin' ? '陳經理' : '小林', v: receiptVals(st, rp, ref) }; o[RCPT[rp].key] = ref.id; return o;
+}
+function receiptRuns(rp, ref) { var k = RCPT[rp].key; return (S.reportRuns || []).filter(function (x) { return x.rp === rp && x[k] === ref.id; }); }
+function genReceipt(rp, ref) { S.reportRuns = S.reportRuns || []; S.reportRuns.push(receiptRun(S, rp, ref, TODAY, uid('rr'))); return receiptRuns(rp, ref).length; }
+function receiptDiff(rp, ref, run) {
+  var now = receiptVals(S, rp, ref); var lb = RCPT[rp].labels;
+  return Object.keys(lb).filter(function (k) { return now[k] !== run.v[k]; }).map(function (k) { return lb[k] + '：產出時 ' + (k === 'amount' ? money(run.v[k]) : k === 'holdUntil' ? roc(run.v[k]) : run.v[k]) + '，目前 ' + (k === 'amount' ? money(now[k]) : k === 'holdUntil' ? roc(now[k]) : now[k]); });
+}
+function receiptModal(rp, ref, runId) {
+  var rs = receiptRuns(rp, ref); var nm = RCPT[rp].name; var ttl = nm + '（' + rp + '）｜' + uName(ref.unitId);
+  if (!rs.length) { modal(ttl, '<p>本筆沒有系統產出的' + nm + '。</p>', {}); return; }
+  var r = first(rs, function (x) { return x.id === runId; }) || rs[rs.length - 1]; var no = rs.indexOf(r) + 1; var df = receiptDiff(rp, ref, r); var lb = RCPT[rp].labels;
+  var vers = rs.length > 1 ? '<div class="vers">' + rs.slice().reverse().map(function (x) { var k = rs.indexOf(x) + 1; return '<button type="button" class="chipbtn' + (x === r ? ' on' : '') + '" data-act="rcpt" data-rp="' + rp + '" data-ref="' + ref.id + '" data-run="' + x.id + '">第 ' + k + ' 版｜' + roc(x.date) + (k === rs.length ? '（現行）' : '') + '</button>'; }).join('') + '</div>' : '';
+  var rows = Object.keys(lb).map(function (k) { return '<div class="kv"><span>' + lb[k] + '</span><span class="num">' + esc(k === 'amount' ? money(r.v[k]) : k === 'holdUntil' ? roc(r.v[k]) : r.v[k]) + '</span></div>'; }).join('') + '<div class="kv"><span>' + (rp === 'RP-09' ? '收訂人' : '包租業') + '</span><span>' + esc(r.v.lessor) + '</span></div>' + '<div class="kv"><span>開立日期</span><span class="num">' + roc(r.date) + '</span></div>';
+  modal(ttl, vers + '<p class="muted small" style="margin:0 0 8px">第 ' + no + ' 版（共 ' + rs.length + ' 版）｜產出 ' + roc(r.date) + '（' + esc(r.by) + '）｜依產出當時的內容顯示（D-153）</p>' + rows +
+    (df.length ? '<div class="warnbox" style="margin-top:10px"><span><b>目前資料與這一版不同：</b>' + df.map(esc).join('；') + '。需要新版請按「重新產出」。</span></div>' : '<p class="muted small" style="margin-top:10px">與目前資料一致。</p>') +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button type="button" class="btn sm outline" data-act="stub" data-stub="下載' + nm + '（' + rp + '）">下載 Word</button><button type="button" class="btn sm outline" data-act="rcpt-new" data-rp="' + rp + '" data-ref="' + ref.id + '">重新產出（新增一版）</button></div>', { wide: true });
+}
 function lastEfile(l) { var rs = efileRuns(l); return rs[rs.length - 1]; }
 /* 簽約日登錄後（紙本已簽回）只有管理者可以修正並重新產出（D-155、B-11） */
 function efileFixBlock(l) { return l.signDate && !isAdmin() ? '簽約日已登錄（紙本已簽回），只有管理者可以修正並重新產出（D-155）' : ''; }
@@ -2603,7 +2636,7 @@ function contractModal(l, runId) {
   modal('契約本文｜' + uName(l.unitId), vers +
     (r.reason ? '<p class="small" style="margin:0 0 10px"><b>第 ' + no + ' 版修正原因：</b>' + esc(r.reason) + '</p>' : '') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn sm outline" data-act="stub" data-stub="下載合約 Word 檔（RP-18）">下載 Word</button>' +
-    '<button type="button" class="btn sm outline" data-act="efile-fix" data-l="' + l.id + '"' + (blk ? ' disabled aria-describedby="efwhy"' : '') + '>修正並重新產出</button></div>' +
+    (l.deco > 0 ? '<button type="button" class="btn sm outline" data-act="rcpt" data-rp="RP-10" data-ref="' + l.id + '">裝潢保證金收據</button>' : '') + '<button type="button" class="btn sm outline" data-act="efile-fix" data-l="' + l.id + '"' + (blk ? ' disabled aria-describedby="efwhy"' : '') + '>修正並重新產出</button></div>' +
     (blk ? '<p class="why" id="efwhy" style="margin:-4px 0 12px"><span><b>「修正並重新產出」目前無法執行：</b>' + blk + '</span></p>' : '') + contractHtml(r, '<span class="num" id="idno">A1●●●●●' + String(l.id).replace(/\D/g, '').padStart(3, '0').slice(-3) + '</span> <button type="button" class="btn sm ghost" data-act="reveal">顯示</button>', { tel: l.phone, addr: l.party && l.party.addr, gtel: l.guarantor && l.guarantor.phone, gaddr: l.guarantor && l.guarantor.addr }),
     { wide: true, sub: '第 ' + no + ' 版（共 ' + rs.length + ' 版）｜範本版次 ' + esc(r.tpl) + '｜產出 ' + roc(r.date) + '（' + esc(r.by) + '）｜依產出當時的內容顯示（D-153）' });
 }
@@ -2752,9 +2785,21 @@ function ledgerModal(l, tab) {
 /* 擔保金帳異動清單（D-245、B-41）：押金收取（續約約為「續約轉入」）、裝潢保證金、補足由租約現況推出；催繳抵扣與沖正存在 l.depUsed（amount＝使餘額減少的金額，沖正筆的 amount 與原筆同號、方向相反）。
    餘額逐筆累計、不重算既有各筆；沖正＝另開一筆金額相反的異動，原筆不動 */
 function depLedger(l) {
-  var rows = [], inType = l.source === '續約' ? '續約轉入' : '收取', d0 = l.signDate || l.start;
-  rows.push({ id: 'in:' + l.id, date: d0, type: inType, delta: l.deposit, sys: inType !== '收取' });
-  if (l.deco) rows.push({ id: 'deco:' + l.id, date: d0, type: '裝潢保證金', delta: l.deco, sys: true });
+  var rows = [], inType = l.source === '續約' ? '續約轉入' : '收取', d0 = l.signDate || l.start, ri = l.renewIn;
+  if (ri) {
+    /* 續約（D-082、D-139、D-150）：新約轉入的是舊約擔保金帳餘額，不是新約定額；新押金較低 → 同日「退還」差額，較高 → 差額補收（已列應收，列在這裡讓餘額合計等於新約定額）。裝潢保證金另算一組 */
+    rows.push({ id: 'in:' + l.id, date: d0, type: '續約轉入', delta: ri.dep, sys: true, memo: '自舊約轉入' });
+    if (ri.gapDep < 0) rows.push({ id: 'inrf:' + l.id, date: d0, type: '退還', delta: ri.gapDep, sys: true, memo: '續約押金調降，退還差額' });
+    if (ri.gapDep > 0) rows.push({ id: 'ingap:' + l.id, date: d0, type: '補足', delta: ri.gapDep, sys: true, memo: '續約差額補收（已列應收「押金差額補收」）' });
+    if (ri.deco > 0) {
+      rows.push({ id: 'decoin:' + l.id, date: d0, type: '續約轉入', delta: ri.deco, sys: true, memo: '裝潢保證金，自舊約轉入' });
+      if (ri.gapDeco < 0) rows.push({ id: 'decorf:' + l.id, date: d0, type: '退還', delta: ri.gapDeco, sys: true, memo: ri.gapDeco === -ri.deco ? '裝潢保證金全額退還（改提連帶保證人）' : '裝潢保證金調降，退還差額' });
+      if (ri.gapDeco > 0) rows.push({ id: 'decogap:' + l.id, date: d0, type: '補足', delta: ri.gapDeco, sys: true, memo: '裝潢保證金差額補收（已列應收）' });
+    } else if (l.deco) rows.push({ id: 'deco:' + l.id, date: d0, type: '裝潢保證金', delta: l.deco, sys: true });
+  } else {
+    rows.push({ id: 'in:' + l.id, date: d0, type: inType, delta: l.deposit, sys: inType !== '收取' });
+    if (l.deco) rows.push({ id: 'deco:' + l.id, date: d0, type: '裝潢保證金', delta: l.deco, sys: true });
+  }
   leaseRecs(l.id).filter(function (r) { return r.item === '押金補足' && r.paid > 0; }).forEach(function (r) {
     /* 補足列的日期取補款日（收款日與應繳日較晚者，與保證金補足違約金同一口徑）；分不出收款的部分（舊資料）用應繳日 */
     var parts = recAllocParts(r), traced = 0;
@@ -2762,6 +2807,10 @@ function depLedger(l) {
     if (r.paid > traced) rows.push({ id: 'fill:' + r.id, date: r.due, type: '補足', delta: r.paid - traced, sys: true });
   });
   (l.depUsed || []).forEach(function (x) { rows.push({ id: x.id, date: x.date, type: x.type, delta: -x.amount, recId: x.recId || null, reason: x.reason || '', by: x.by || '', target: x.target || null, deliver: x.deliver || null, sys: x.type === '催繳抵扣退回' || x.type === '期初差額' }); });
+  if (l.renewOut) {   /* 舊約：續約當天整筆轉出（與新約「續約轉入」成對，只能經撤銷續約或續約押金調整沖正，B-41） */
+    rows.push({ id: 'out:' + l.id, date: l.renewOut.date, type: '續約轉出', delta: -l.renewOut.dep, sys: true, memo: '轉入新約' });
+    if (l.renewOut.deco > 0) rows.push({ id: 'decoout:' + l.id, date: l.renewOut.date, type: '續約轉出', delta: -l.renewOut.deco, sys: true, memo: '裝潢保證金，轉入新約' });
+  }
   var bal = 0;
   rows.forEach(function (r) { bal += r.delta; r.bal = bal; r.reversed = !r.target && (l.depUsed || []).some(function (x) { return x.type === '沖正' && x.target === r.id; }); r.reversible = !r.sys && r.type !== '沖正' && !r.reversed; });
   return rows;
@@ -2819,7 +2868,7 @@ function depRevert(l, rowId, why) {
 function depLedgerModal(l) {
   var rows = depLedger(l);
   var body = '<div class="tblwrap"><table class="tbl"><thead><tr><th>日期</th><th>類型</th><th class="r">異動</th><th class="r">餘額</th><th>備註</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
-    var note = r.type === '沖正' ? '沖正對象：' + esc((first(rows, function (x) { return x.id === r.target; }) || {}).type || '') + '｜' + esc(r.by) + '｜' + esc(r.reason) : r.reversed ? '<span class="pill p-gray">已沖正</span>' : r.type === '催繳抵扣' ? '抵扣 ' + (function () { var q = byId(S.receivables, r.recId); return q ? rocM(q.month) + ' ' + q.item : ''; })() : r.sys ? '<span class="muted small">系統交易，不可單筆沖正</span>' : '';
+    var note = r.type === '沖正' ? '沖正對象：' + esc((first(rows, function (x) { return x.id === r.target; }) || {}).type || '') + '｜' + esc(r.by) + '｜' + esc(r.reason) : r.reversed ? '<span class="pill p-gray">已沖正</span>' : r.type === '催繳抵扣' ? '抵扣 ' + (function () { var q = byId(S.receivables, r.recId); return q ? rocM(q.month) + ' ' + q.item : ''; })() : r.sys ? (r.memo ? esc(r.memo) + '｜' : '') + '<span class="muted small">系統交易，不可單筆沖正</span>' : '';
     return '<tr' + (r.reversed ? ' style="opacity:.6"' : '') + '><td class="num">' + roc(r.date) + '</td><td>' + r.type + '</td><td class="r num">' + (r.delta > 0 ? '+' : '') + num(r.delta) + '</td><td class="r num">' + num(r.bal) + '</td><td>' + note + '</td><td>' + (r.reversible && isAdmin() ? '<button type="button" class="btn sm ghost" data-act="dep-revert" data-l="' + l.id + '" data-id="' + r.id + '">沖正</button>' : '') + '</td></tr>';
   }).join('') + '</tbody></table></div><p class="muted small" style="margin-top:8px">餘額逐筆累計，沖正不重算既有各筆（D-245）。可沖正：收取、催繳抵扣；續約轉入、裝潢保證金、押金補足屬系統交易，不可單筆沖正（B-41）。催繳抵扣只能動用租約押金（B-1）。</p>' +
     (depPenOn(l) ? '<p class="small" style="margin-top:8px"><b>保證金補足違約金</b>（新範本，CR-74）：算到今天累計 ' + money(depPenAcc(l, TODAY)) + '，已產生應收 ' + money(depPenGen(l)) + '；補足押金時產生增量，退租時算到計租終點（D-301、D-299）' + (l.opening ? '｜期初轉入：切換日 ' + roc(l.opening.date) + '、期初累計 ' + money(l.opening.penAcc || 0) + '，之後從切換日起重算（D-322）' : '') + '</p>' + rows.filter(function (r) { return r.type === '催繳抵扣' && !r.reversed; }).map(function (r) { return '<div class="check"><span style="flex:1">' + roc(r.date) + ' 發文抵扣 ' + money(-r.delta) + '｜送達日 ' + (r.deliver ? roc(r.deliver) : '空白（以發文日起算）') + '</span><button type="button" class="btn sm outline" data-act="dep-deliver" data-l="' + l.id + '" data-id="' + r.id + '">填送達日</button></div>'; }).join('') : '') +
@@ -2852,7 +2901,7 @@ function pUnit(id) {
     docs = '<div class="o-docs"><button type="button" class="card pad rowcard" data-act="ctext" data-l="' + l.id + '">契約本文</button><button type="button" class="card pad rowcard" data-act="ledger" data-l="' + l.id + '">帳務明細</button></div>';
   } else if (res) {
     var exp = diff(res.holdUntil, TODAY) > 0;
-    summary = '<section class="card pad col o-sum" aria-label="訂金"><h2 class="h2s serif">已收訂，保留中</h2><div class="kv"><span>付訂人</span><span>' + esc(res.payer) + '｜' + esc(res.phone) + '</span></div><div class="kv"><span>訂金</span><span class="num">' + money(res.amount) + '（收訂日 ' + roc(res.date) + '）</span></div><div class="kv"><span>保留期限</span><span class="num">' + roc(res.holdUntil) + (exp ? ' <span class="pill p-amber">已過期 ' + diff(res.holdUntil, TODAY) + ' 天</span>' : '') + '</span></div></section>';
+    summary = '<section class="card pad col o-sum" aria-label="訂金"><h2 class="h2s serif">已收訂，保留中</h2><div class="kv"><span>付訂人</span><span>' + esc(res.payer) + '｜' + esc(res.phone) + '</span></div><div class="kv"><span>訂金</span><span class="num">' + money(res.amount) + '（收訂日 ' + roc(res.date) + '）</span></div><div class="kv"><span>保留期限</span><span class="num">' + roc(res.holdUntil) + (exp ? ' <span class="pill p-amber">已過期 ' + diff(res.holdUntil, TODAY) + ' 天</span>' : '') + '</span></div><div><button type="button" class="btn sm outline" data-act="rcpt" data-rp="RP-09" data-ref="' + res.id + '">訂金收據</button></div></section>';
   } else if (u.status === '招租中') {
     summary = '<div class="facts o-sum"><div class="fact"><span>招租定價</span><b>' + money(u.listPrice) + '</b><button type="button" class="btn outline" data-act="listprice" data-u="' + u.id + '">修改</button></div><div class="fact"><span>招租起日</span><b>' + roc(u.statusSince) + '</b></div></div>';
   } else if (u.status === '整備中') {
@@ -3058,7 +3107,7 @@ function utilCore(u, ls) {
   var meters = USITES[0].meters.map(function (mt) {
     var b = u.elec[mt.id], eFrom = addDays(b.ePrev, 1), lau = (u.laundry || {})[mt.id] || 0;
     var rs = base.filter(function (x) { return x.mid === mt.id; }), vs = vacOf(eFrom, b.eNow).filter(function (v) { return v.mid === mt.id; });
-    var bm = (u.basis || {})[mt.id]; rs.forEach(function (x) { x.ew = bw(bm, x.occ); x.ed = x.ew * liveDays(x.l, eFrom, b.eNow); });
+    var bm = (u.basis || {})[mt.id]; rs.forEach(function (x) { x.ew = bw(bm, x.occ); x.ed = occDays(x.l, eFrom, b.eNow, bm); });   /* 電費同水費：人數依單元歷程逐日加權（Q-040、CR-17）；按房間數時＝實住天數 */
     vs.forEach(function (v) { v.ed = v.days; v.e = v.none ? Math.round(unitDeg(u.meters[v.unitId]) * b.price) : 0; });
     var pubE = b.bill - sum(rs, function (x) { return x.e; }) - sum(vs, function (v) { return v.e; }), poolE = pubE - lau;
     var E = utilShare(poolE, rs.map(function (x) { return x.ed; }).concat(vs.map(function (v) { return v.ed; }))); rs.forEach(function (x, i) { x.ce = E.rows[i]; }); vs.forEach(function (v, i) { v.ce = E.rows[rs.length + i]; });
@@ -3947,6 +3996,10 @@ function openAction(act, ds) {
         var decoOld = l.deco || 0, decoGap = 0, gswap = !!f.gswap && decoOld > 0;
         if (gswap) { nl.guarantor = { name: needText(f.gname, '連帶保證人姓名'), phone: needPhone(f.gphone, '保證人電話'), nat: '本國' }; nl.deco = 0; decoGap = -decoOld; }
         else if (decoOld) { nl.deco = Math.round(rent * (l.decoMonths || 2)); decoGap = nl.deco - decoOld; }
+        /* 擔保金帳成對異動（D-082）：舊約「續約轉出」、新約「續約轉入」＝舊約押金帳餘額（不含裝潢保證金）；裝潢保證金另一組 */
+        var oldDepBal = depBalance(l) - decoOld;
+        delete nl.renewOut; nl.renewIn = { from: l.id, dep: oldDepBal, deco: decoOld, gapDep: gap, gapDeco: decoGap };
+        l.renewOut = { to: nl.id, date: sd, dep: oldDepBal, deco: decoOld };
         l.active = false; l.endReason = '到期續約'; S.leases.push(nl);
         /* 舊約未沖的應收留在舊約、條款照舊（D-270、D-206）；欠租頁同時列新舊兩份約 */
         if (gap < 0) S.depRefunds.push({ id: uid('dr'), leaseId: nl.id, kind: '續約調降退還', amount: -gap, why: '續約押金調降，退還差額（D-279）', created: TODAY, bank: '', acctName: '', acct: '', refundedDate: null, by: '' });   /* 擔保金帳「退還」在續約當下已寫入（D-139）；這筆只記退款帳戶、退款日、承辦人（D-279 M4） */
@@ -3956,7 +4009,7 @@ function openAction(act, ds) {
         if (decoGap < 0) S.depRefunds.push({ id: uid('dr'), leaseId: nl.id, kind: '續約調降退還', amount: -decoGap, why: gswap ? '續約改提連帶保證人，裝潢保證金全額退還（D-139 第 2 點）' : '續約裝潢保證金調降，退還差額（D-139 第 2 點）', created: TODAY, bank: '', acctName: '', acct: '', refundedDate: null, by: '' });
         if (decoGap > 0) S.receivables.push({ id: uid('rv'), leaseId: nl.id, item: '裝潢保證金差額補收', month: s.slice(0, 7), due: s, amount: decoGap, paid: 0 });
         S.contacts.push({ id: uid('k'), leaseId: nl.id, date: TODAY, kind: '續約', text: '續約 ' + roc(s) + '–' + roc(e) + '，月租 ' + money(rent) + '；押金 ' + money(l.deposit) + ' 轉入新約' + (gap > 0 ? '，補收差額 ' + money(gap) : gap < 0 ? '，退還差額 ' + money(-gap) : '') + (nl.exempt ? '；管理者確認沿用「無保人無擔保」（陳經理）' : '') });
-        addFilings(nl); var ef = genEfile(nl);
+        addFilings(nl); var ef = genEfile(nl); if (nl.deco > 0) { genReceipt('RP-10', nl); ef += '；已產生裝潢保證金收據（RP-10）'; }
         return (sd > s ? '注意：簽約日晚於起租日，主管機關必查；' : '') + '已建立續約合約' + (gap > 0 ? '，押金差額 ' + money(gap) + ' 列入應收' : gap < 0 ? '，要退還押金差額 ' + money(-gap) : '') + (decoGap > 0 ? '，裝潢保證金差額 ' + money(decoGap) + ' 列入應收' : decoGap < 0 ? '，要退還裝潢保證金 ' + money(-decoGap) + (gswap ? '（改提連帶保證人，全額退還）' : '') : '') + '；' + (nl.filingsPending ? '申報待辦於簽約日 ' + roc(sd) + ' 當天建立（D-224）' : '申報待辦 2 筆') + ef;
       } });
   } else if (act === 'efile-fix') {
@@ -4032,7 +4085,7 @@ function openAction(act, ds) {
   } else if (act === 'reserve') {
     modal('收訂｜' + uName(u.id), fld('付訂人稱呼', inp('payer', '', 'placeholder="例：王小姐"')) + fld('電話', inp('phone', '', 'inputmode="tel" placeholder="試用版請勿填真實號碼"')) + fld('訂金金額', inp('amt', Math.round(u.listPrice / 2), 'inputmode="numeric"'), '預設＝招租定價 ÷ 2，四捨五入到元（CR-45）') + '<div class="row2">' + dateFld('date', '收訂日', TODAY) + dateFld('hold', '保留期限', addDays(TODAY, 7)) + '</div>', { submit: '收訂', onSubmit: function (f) {
       var p = needText(f.payer, '付訂人稱呼'); var ph = needText(f.phone, '電話'); var a = needInt(f.amt, '訂金金額'); var d = needDate(f.date, '收訂日'); var h = needDate(f.hold, '保留期限'); if (h < d) throw '保留期限不能早於收訂日';
-      S.reservations.push({ id: uid('r'), unitId: u.id, payer: p, phone: ph, amount: a, date: d, holdUntil: h, status: '保留中' }); return '已收訂，保留至 ' + roc(h) + '（到期次日起會提醒）';
+      var nr9 = { id: uid('r'), unitId: u.id, payer: p, phone: ph, amount: a, date: d, holdUntil: h, status: '保留中' }; S.reservations.push(nr9); S.reportRuns = S.reportRuns || []; S.reportRuns.push(receiptRun(S, 'RP-09', nr9, d, uid('rr'))); return '已收訂，保留至 ' + roc(h) + '（到期次日起會提醒）；已產出訂金收據（RP-09），可從單元頁回看';
     } });
   } else if (act === 'sign') {
     var res = ds.r ? first(S.reservations, function (r) { return r.id === ds.r; }) : null; var start = addDays(TODAY, 1);
@@ -4065,7 +4118,7 @@ function openAction(act, ds) {
         var credit = 0; if (res) { res.status = '已轉簽約'; res.leaseId = nl.id; credit = res.amount; }
         [['租約押金', nl.deposit]].concat(nl.deco ? [['裝潢保證金', nl.deco]] : [], [['租金', rent]], nl.mgmtMode === '另計' ? [['管理費', nl.mgmt]] : []).forEach(function (x) { var pd = Math.min(credit, x[1]); credit -= pd; S.receivables.push({ id: uid('rv'), leaseId: nl.id, item: x[0], month: s.slice(0, 7), due: s, amount: x[1], paid: pd }); });
         if (S.util.meters && u.caseId === 'c3' && !S.util.meters[u.id]) S.util.meters[u.id] = [{ name: '私表 1', prev: 0, now: 0 }];   /* 私表掛單元，換租客沿用（D-199） */
-        addFilings(nl); var ef = genEfile(nl);
+        addFilings(nl); var ef = genEfile(nl); if (nl.deco > 0) { genReceipt('RP-10', nl); ef += '；已產生裝潢保證金收據（RP-10）'; }
         return (sd > s ? '注意：簽約日晚於起租日，主管機關必查；' : '') + (nl.filingsPending ? '已簽約；簽約日 ' + roc(sd) + ' 還沒到，申報待辦於簽約日當天建立（期限 ' + roc(addDays(sd, 30)) + '，D-224）' : '已簽約，建立 2 筆申報待辦（期限 ' + roc(addDays(sd, 30)) + '）') + ef + '；簽約資料尚缺 ' + missingDocs(nl).length + ' 項，可於單戶頁補登';
       } });
   } else if (act === 'deposit') {
@@ -4210,6 +4263,11 @@ document.addEventListener('click', function (e) {
   if (act === 'reveal') { var el = $('#' + (ds.t || 'idno')); if (el) el.textContent = '（試用版不顯示完整證號；正式版此時才讀取證號資料）'; t.remove(); return; }
   if (act === 'house') { houseModal(H(ds.id)); return; }
   if (act === 'ctext') { contractModal(L(ds.l), ds.run); return; }
+  if (act === 'rcpt' || act === 'rcpt-new') {   /* 收據類對外文件回看／重新產出（RP-09、RP-10，D-153） */
+    var rf = ds.rp === 'RP-09' ? first(S.reservations, function (x) { return x.id === ds.ref; }) : L(ds.ref); if (!rf) return;
+    if (act === 'rcpt-new') { var n = genReceipt(ds.rp, rf); save(); receiptModal(ds.rp, rf); toast('已產出第 ' + n + ' 版' + RCPT[ds.rp].name + '，舊版保留'); return; }
+    receiptModal(ds.rp, rf, ds.run); return;
+  }
   if (act === 'sign-info') { signModal(L(ds.l)); return; }
   if (act === 'sign-fold') { SIGN_FOLD[ds.l] = true; render(); return; }
   if (act === 'hist') { histModal(U(ds.u)); return; }
