@@ -68,7 +68,7 @@
 <body>
 <div class="page">
   <h1>PRM System 規格確認 — 待確認問題單（可填寫）</h1>
-  <div class="meta">2026-10-15 更新（「存證信函被退回後的實務做法」已回覆，移出）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
+  <div class="meta">2026-10-20 更新（新增「匯入正航收款時，非租金款項怎麼補應收」）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
 
   <div class="toolbar">
     <label>填寫人：<input id="writer" data-save="writer" placeholder="請輸入姓名"></label>
@@ -76,7 +76,15 @@
     <button class="secondary" onclick="exportAnswers('download')">匯出回覆（下載檔案）</button>
     <span class="hint">填寫內容會自動暫存在這台裝置的瀏覽器裡，關閉再開不會消失。填完請按「複製全部回覆」，貼到 LINE 或 email 傳回給發單人（電腦上也可改用「匯出回覆」下載檔案）。</span>
   </div>
-  <p class="hint" style="margin:16px 0">目前沒有待回覆的問題。</p>
+  <div class="qcard" data-q="Q-064" data-title="匯入正航收款時，非租金款項怎麼補應收">
+    <div class="qhead"><span><span class="qid">Q-064</span><span class="qtitle">匯入正航收款時，非租金款項怎麼補應收</span></span><span class="assign">指派給：<input data-save="asg-Q-064" value="內勤" readonly></span></div>
+    <div class="ctx">背景：系統會定期匯入會計的正航「已收帳款明細表」，自動沖掉房客的租金、管理費等應收。有些收款含非租金款項（水電、罰金、雜費）。系統裡沒有對應的應收時，多出的錢會先記成房客的預收。這時要到該房客的租約新增一筆應收（例：水費 500 元），系統會自動用預收沖掉。</div>
+    <ol>
+      <li>匯入後再到租約補一筆應收，這樣做可以接受嗎？還是希望在匯入畫面上直接選費用項目，一次做完？</li>
+      <li>這種要補應收的收款，每個月大約有幾筆？</li>
+    </ol>
+    <textarea class="ans" data-save="ans-Q-064" placeholder="回覆…"></textarea>
+  </div>
 
   <div class="savenote" id="savenote"></div>
 </div>
