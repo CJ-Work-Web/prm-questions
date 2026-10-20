@@ -3599,7 +3599,7 @@ function pubSitePick(kind) {
 }
 function pubForm(kind, site) {
   var names = siteCases(site).map(function (c) { return c.name; });
-  var caseFld = fld('案件（上位契約）', sel('kase', names), '此案場有房屋的案件；公區費用算進這個案件的維修成本' + (kind === 'repair' ? '，完工時可拆給多個案件（D-223）' : '（D-130）'));
+  var caseFld = fld('案件（上層合約）', sel('kase', names), '此案場有房屋的案件；公區費用算進這個案件的維修成本' + (kind === 'repair' ? '，完工時可拆給多個案件（D-223）' : '（D-130）'));
   if (kind === 'repair') {
     modal('公區報修｜' + esc(site), caseFld + fld('維修項目', inp('item', '', 'placeholder="例：公區走道漏水"')) + dateFld('date', '報修日', TODAY) + fld('備註（選填）', '<textarea name="memo"></textarea>', '建立後仍可在「維修資料」補寫或修改'), { sub: '公區維修沒有單元；完工時再填成本與案件拆分', submit: '建立報修', onSubmit: function (f) {
       var item = needText(f.item, '維修項目'); var d = needDate(f.date, '報修日'); var cid = caseIdByName(site, f.kase);
