@@ -415,7 +415,7 @@ main{flex:1;min-width:0;padding:32px 40px 64px;max-width:1260px}
 var TODAY = '2026-10-05';
 var FILING_ALERT_DAYS = 10;   /* 申報剩幾天標紅（D-254；原 7 天，OV-226） */
 var STALE_DAYS = 30;          /* 單元狀態超過幾天沒更新就提醒（D-254；原暫定 60 天） */
-var KEY = 'prm-prototype-v38';   /* v38：示範資料加訂金收據（RP-09）、裝潢保證金收據（RP-10）產出紀錄（D-153，2026-10-19）；v37：示範資料加僅管理案件「楓林巷」（D-312，2026-10-18）；v36：期初轉入的租約（D-322） */
+var KEY = 'prm-prototype-v39';   /* v39：房屋加坪數依據（D-336，2026-10-20）；v38：示範資料加訂金收據（RP-09）、裝潢保證金收據（RP-10）產出紀錄（D-153，2026-10-19）；v37：示範資料加僅管理案件「楓林巷」（D-312，2026-10-18）；v36：期初轉入的租約（D-322） */
 var S = null;
 var UPGRADED = false;   /* 資料版本升級後舊試用資料被丟棄：開頁時明講，不靜默清空 */
 var $ = function (sel) { return document.querySelector(sel); };
@@ -558,7 +558,7 @@ function seed() {
   ];
   var un = 0, hn = 0;
   // 房屋管理費＝坪數 × 單價，取整方式依案場設定（D-208）：示範 c1 無條件捨去、河濱新城（c6～c8）四捨五入
-  function house(c, k, addr, floor, ping, join) { var h = { id: 'h' + (++hn), caseId: c, contractId: k, addr: addr, floor: floor, ping: ping, join: join, buildNo: '0' + (1200 + hn) + '-000', water: 'W-' + (330000 + hn * 7), elec: 'E-' + (18000000 + hn * 13), gas: c === 'c2' ? 'G-' + (5000 + hn) : '—', mgmt: ['c1', 'c6', 'c7', 'c8'].indexOf(c) >= 0 ? mgmtFee(mgmtRule(c), ping, 60) : 0, fire: Math.round(ping * 50000), land: [{ sec: C0(c) + '段一小段', no: String(100 + hn).padStart(4, '0') + '-0000', area: Math.round(300 + r() * 500), share: '1/' + (40 + Math.floor(r() * 60)) }] }; if (r() < 0.2) h.land.push({ sec: C0(c) + '段一小段', no: String(100 + hn).padStart(4, '0') + '-0001', area: Math.round(50 + r() * 100), share: '1/' + (40 + Math.floor(r() * 60)) }); st.houses.push(h); return h; }
+  function house(c, k, addr, floor, ping, join) { var h = { id: 'h' + (++hn), caseId: c, contractId: k, addr: addr, floor: floor, ping: ping, pingBasis: c === 'c9' ? '管理者填' : addr === '河濱路 88 號 5 樓之 1' ? '社區銷帳表' : '合約附表', join: join, buildNo: '0' + (1200 + hn) + '-000', water: 'W-' + (330000 + hn * 7), elec: 'E-' + (18000000 + hn * 13), gas: c === 'c2' ? 'G-' + (5000 + hn) : '—', mgmt: ['c1', 'c6', 'c7', 'c8'].indexOf(c) >= 0 ? mgmtFee(mgmtRule(c), ping, 60) : 0, fire: Math.round(ping * 50000), land: [{ sec: C0(c) + '段一小段', no: String(100 + hn).padStart(4, '0') + '-0000', area: Math.round(300 + r() * 500), share: '1/' + (40 + Math.floor(r() * 60)) }] }; if (r() < 0.2) h.land.push({ sec: C0(c) + '段一小段', no: String(100 + hn).padStart(4, '0') + '-0001', area: Math.round(50 + r() * 100), share: '1/' + (40 + Math.floor(r() * 60)) }); st.houses.push(h); return h; }
   function C0(c) { return { c1: '河岸', c2: '和平', c3: '青田', c4: '松園', c5: '港墘', c6: '河濱', c7: '河濱', c8: '河濱', c9: '楓林' }[c]; }
   /* name＝單元名稱＝同事在共用日曆的寫法，全系統唯一；code＝房號（獨立編號），只用在合約、申報等對外文件，各案場可重複（D-154） */
   function add(c, code, bld, name, type, price, h) { st.units.push({ id: 'u' + (++un), caseId: c, houseId: h.id, code: code, building: bld, name: name, type: type, listPrice: price, status: '已出租', statusSince: '2026-01-01', note: '' }); }
@@ -2033,7 +2033,7 @@ function houseModal(h) {
   var us = S.units.filter(function (u) { return u.houseId === h.id; }); var k = K(h.contractId);
   var kv = function (a, b) { return '<div class="kv"><span>' + a + '</span><span style="text-align:right">' + b + '</span></div>'; };
   modal(esc(h.addr), '<div>' + kv('所屬合約', esc(k.name)) + kv('加入日期', roc(h.join)) + kv('合約迄日（所屬合約文件）', roc(k.end)) + kv('出租單元', us.map(function (u) { return esc(u.name) + '（房號 ' + esc(u.code) + '）'; }).join('、')) +
-    kv('建號', h.buildNo) + kv('樓層', h.floor + ' 樓') + kv('合約坪數', h.ping + ' 坪') + kv('每月租金成本', money(houseCost(h)) + '<br><small class="muted">合約文件目前月租金 × 坪數 ÷ 合約總坪數；分租房屋為整戶的數字（D-218）</small>') + kv('水號／電號／瓦斯', h.water + '／' + h.elec + '／' + h.gas) + kv('管理費', h.mgmt ? money(houseMgmt(h, TODAY)) + '／月（' + mgmtVerText(mgmtVerAt(bldName(h), TODAY)).replace('｜取整：', '，') + '）' : '—') + kv('應投保火險金額', money(h.fire)) + '</div>' +
+    kv('建號', h.buildNo) + kv('樓層', h.floor + ' 樓') + kv('坪數', h.ping + ' 坪') + kv('坪數依據', esc(h.pingBasis || '—') + '<br><small class="muted">坪數取自哪份資料；與合約上寫的數字不同時看這欄（D-336）</small>') + kv('每月租金成本', money(houseCost(h)) + '<br><small class="muted">合約文件目前月租金 × 坪數 ÷ 合約總坪數；分租房屋為整戶的數字（D-218）</small>') + kv('水號／電號／瓦斯', h.water + '／' + h.elec + '／' + h.gas) + kv('管理費', h.mgmt ? money(houseMgmt(h, TODAY)) + '／月（' + mgmtVerText(mgmtVerAt(bldName(h), TODAY)).replace('｜取整：', '，') + '）' : '—') + kv('應投保火險金額', money(h.fire)) + '</div>' +
     '<h3 class="serif" style="font-size:16px;margin:12px 0 4px">土地標的（' + h.land.length + ' 筆）</h3>' + h.land.map(function (x) { return '<div class="kv"><span>' + x.sec + ' ' + x.no + '</span><span>' + x.area + ' ㎡｜權利範圍 ' + x.share + '</span></div>'; }).join('') +
     '<h3 class="serif" style="font-size:16px;margin:12px 0 4px">現況確認（簽約時由主檔帶入）</h3>' + ['消防設施：有滅火器、偵煙器', '滲漏水：無', '輻射屋檢測：無', '海砂屋檢測：無', '非自然死亡情事：無', '供排水：正常', '未登記增建或違建：無', '公寓大廈規約：有，已檢附'].map(function (x) { return '<div class="kv"><span>' + x.split('：')[0] + '</span><span>' + x.split('：')[1] + '</span></div>'; }).join('') + '<p class="muted small">共 12 項，其餘見合約附件；試用版為假資料。</p>', {});
 }
@@ -3216,12 +3216,12 @@ function pUtility(sid) {
 }
 
 /* ================= 維修、參考表、申報、報表、設定 ================= */
-/* 維修與費用頁（D-223）：工具列（搜尋、案場、上位契約、公區、只看作廢）＋總表＋其他費用；清單區塊 #mbody 可單獨重畫（輸入搜尋字時） */
+/* 維修與費用頁（D-223）：工具列（搜尋、案場、上層合約、公區、只看作廢）＋總表＋其他費用；清單區塊 #mbody 可單獨重畫（輸入搜尋字時） */
 function mfCaseOpts() { return MF.site ? siteCases(MF.site) : S.cases; }
 function mfBar() {
   return '<div class="mfbar">' +
     '<select data-change="mf" data-k="site" aria-label="案場"><option value="">所有案場</option>' + siteList().map(function (s) { return '<option value="' + esc(s.name) + '"' + (MF.site === s.name ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('') + '</select>' +
-    '<select data-change="mf" data-k="kase" aria-label="上位契約"><option value="">所有上位契約</option>' + mfCaseOpts().map(function (c) { return '<option value="' + c.id + '"' + (MF.kase === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
+    '<select data-change="mf" data-k="kase" aria-label="上層合約"><option value="">所有上層合約</option>' + mfCaseOpts().map(function (c) { return '<option value="' + c.id + '"' + (MF.kase === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
     '<label class="check"><input type="checkbox" data-change="mf" data-k="pub"' + (MF.pub ? ' checked' : '') + '><span>公區</span></label>' +
     '<label class="check"><input type="checkbox" data-change="mf" data-k="voided"' + (MF.voided ? ' checked' : '') + '><span>只看作廢</span></label>' +
     '<div class="cfsearch"><div class="sbox">' + ic('search') + '<input type="search" id="mf-q" data-search="mf" autocomplete="off" aria-label="搜尋單元" placeholder="搜尋單元名稱" value="' + esc(MF.q) + '"></div></div></div>';
@@ -3462,7 +3462,7 @@ function pCaseCfg() {
       return '<section class="card pad col" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 class="serif h2s">' + c.name + '</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn sm ghost" href="#/case/' + c.id + '">主約</a><a class="btn sm ghost" href="#/case/' + c.id + '/houses">房屋</a>' + (S.parking.some(function (p) { return p.caseId === c.id; }) ? '<a class="btn sm ghost" href="#/case/' + c.id + '/parking">車位</a>' : '') + '<button class="btn sm ghost" data-act="stub" data-stub="修改案件（上層合約）">修改</button></span></div>' +
         '<div class="grid2" style="gap:2px 28px">' + kvRow('出租方', esc(ks[0].lessor)) + kvRow('承辦人', esc(c.officer)) + kvRow('房客繳款帳戶', '沿用公司主要帳戶') + kvRow('所在案場', esc(st.join('、'))) + '</div>' +
         '<div class="tblwrap"><table class="tbl"><thead><tr><th>合約（主約＋擴充）</th><th>成本分攤口徑</th><th>空間裝修攤提</th><th>合約範本</th></tr></thead><tbody>' +
-        ks.map(function (k, i) { return '<tr><td><b>' + esc(k.no) + '</b>' + (i ? '<span class="tag">擴充</span>' : '') + '<br><small class="muted">' + roc(k.start) + '–' + roc(k.end) + '</small></td><td>' + (k.managementOnly ? '<span class="muted">僅管理案件：不適用（D-312）</span></td><td class="muted">—' : (c.id === 'c2' ? '依合約附表二租金比例' : '按合約坪數比例') + '<br><small class="muted">分租套房再按房間數均分（D-106）</small></td><td class="num">' + fullMonths(k.start, k.end) + ' 個月<br><small class="muted">切齊合約期間</small>') + '</td><td>' + TPL[c.id] + '<br><small class="muted">滯納金條款：有（範本預設）</small></td></tr>'; }).join('') + '</tbody></table></div>' +
+        ks.map(function (k, i) { return '<tr><td><b>' + esc(k.no) + '</b>' + (i ? '<span class="tag">擴充</span>' : '') + '<br><small class="muted">' + roc(k.start) + '–' + roc(k.end) + '</small></td><td>' + (k.managementOnly ? '<span class="muted">僅管理案件：不適用（D-312）</span></td><td class="muted">—' : (c.id === 'c2' ? '依合約附表二租金比例' : '按坪數比例') + '<br><small class="muted">分租套房再按房間數均分（D-106）</small></td><td class="num">' + fullMonths(k.start, k.end) + ' 個月<br><small class="muted">切齊合約期間</small>') + '</td><td>' + TPL[c.id] + '<br><small class="muted">滯納金條款：有（範本預設）</small></td></tr>'; }).join('') + '</tbody></table></div>' +
         (log.length ? '<div class="muted small">異動紀錄：' + log.map(function (x) { return roc(x.date) + ' ' + x.item + '「' + x.from + '」→「' + x.to + '」（' + x.by + '，' + x.why + '）'; }).join('；') + '</div>' : '') + '</section>';
     }).join('');
 }
@@ -4382,7 +4382,7 @@ document.addEventListener('change', function (e) {
   var t = e.target; var k = t.getAttribute('data-change'); if (!k) return;
   if (k === 'paper-f') { var pk = t.getAttribute('data-k'); if (pk === 'owner' || pk === 'route') PF[pk] = t.value || ''; render(); return; }
   if (k === 'site-basis') { var bsid = t.getAttribute('data-site'), bus = usite(bsid), bk = t.getAttribute('data-meter'), bv = t.value === 'room' ? 'room' : 'head'; if (!isAdmin() || !bus) { render(); toast('案場設定限管理者修改（D-073）'); return; } var bold = siteBasis(bsid)[bk]; S.siteCfg = S.siteCfg || {}; S.siteCfg[bsid] = S.siteCfg[bsid] || {}; S.siteCfg[bsid].basis = S.siteCfg[bsid].basis || {}; S.siteCfg[bsid].basis[bk] = bv; var bname = bk === 'water' ? '水費總表' : first(bus.meters, function (m) { return m.id === bk; }).name; if (bold !== bv) S.settingLog.push({ caseId: bus.caseId, date: TODAY, item: bus.name + ' ' + bname + '分攤基數', from: BASIS[bold], to: BASIS[bv], by: '管理者', why: '案場設定切換' }); save(); render(); toast(bus.name + ' ' + bname + '：改為' + BASIS[bv] + '（已產生應收的期次不受影響）'); return; }
-  if (k === 'mf') {   /* 維修頁篩選：案場、上位契約、公區、只看作廢（D-223）；換案場時，已選的上位契約不在該案場就清掉 */
+  if (k === 'mf') {   /* 維修頁篩選：案場、上層合約、公區、只看作廢（D-223）；換案場時，已選的上層合約不在該案場就清掉 */
     var mk = t.getAttribute('data-k');
     if (mk === 'site') { MF.site = t.value; if (MF.kase && mfCaseOpts().every(function (c) { return c.id !== MF.kase; })) MF.kase = ''; }
     else if (mk === 'kase') MF.kase = t.value; else if (mk === 'pub') MF.pub = !!t.checked; else if (mk === 'voided') MF.voided = !!t.checked;
