@@ -68,7 +68,7 @@
 <body>
 <div class="page">
   <h1>PRM System 規格確認 — 待確認問題單（可填寫）</h1>
-  <div class="meta">2026-10-23 更新（新增「存證信函定稿範本的寄送對象與地址」）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
+  <div class="meta">2026-10-24 更新（Q-064、Q-065 已回覆結案，目前沒有待回覆的問題）｜僅列尚待回覆的問題｜編號對應 QUESTIONS.md</div>
 
   <div class="toolbar">
     <label>填寫人：<input id="writer" data-save="writer" placeholder="請輸入姓名"></label>
@@ -76,28 +76,6 @@
     <button class="secondary" onclick="exportAnswers('download')">匯出回覆（下載檔案）</button>
     <span class="hint">填寫內容會自動暫存在這台裝置的瀏覽器裡，關閉再開不會消失。填完請按「複製全部回覆」，貼到 LINE 或 email 傳回給發單人（電腦上也可改用「匯出回覆」下載檔案）。</span>
   </div>
-  <div class="qcard" data-q="Q-064" data-title="匯入正航收款時，非租金款項怎麼補應收">
-    <div class="qhead"><span><span class="qid">Q-064</span><span class="qtitle">匯入正航收款時，非租金款項怎麼補應收</span></span><span class="assign">指派給：<input data-save="asg-Q-064" value="內勤" readonly></span></div>
-    <div class="ctx">背景：系統會定期匯入會計的正航「已收帳款明細表」，自動沖掉房客的租金、管理費等應收。有些收款含非租金款項（罰金、雜費等）。水電瓦斯帳單算好就會先列應收，銷帳時通常已有應收。系統裡沒有對應的應收時，多出的錢會先記成房客的預收。這時要到該房客的租約新增一筆應收（例：罰金 500 元），系統會自動用預收沖掉。</div>
-    <ol>
-      <li>匯入後再到租約補一筆應收，這樣做可以接受嗎？還是希望在匯入畫面上直接選費用項目，一次做完？</li>
-      <li>房客付款時，哪些款項系統裡可能還沒有應收？請列出項目（例：違規罰金、訪客過夜費、損壞賠償或維修收費、其他小額雜費；或水電帳單算好但還沒登記應收就收到錢）。</li>
-      <li>第 2 題的款項，每個月大約有幾筆？</li>
-    </ol>
-    <textarea class="ans" data-save="ans-Q-064" placeholder="回覆…"></textarea>
-  </div>
-
-  <div class="qcard" data-q="Q-065" data-title="存證信函定稿範本的寄送對象與地址">
-    <div class="qhead"><span><span class="qid">Q-065</span><span class="qtitle">存證信函定稿範本的寄送對象與地址</span></span><span class="assign">指派給：<input data-save="asg-Q-065" value="內勤" readonly></span></div>
-    <div class="ctx">背景：存證信函的五階段定稿範本（2026-10-22）每封只有 1 位收件人欄，沒有副本收件人欄；舊範本有 3 位收件人欄（承租人、2 位連帶保證人）。系統目前的預設是收件人＝承租人、地址取通訊地址，連帶保證人副本保留為選填。</div>
-    <ol>
-      <li>存證信函寄給承租人時，地址寄哪裡？（通訊地址、租賃標的地址、戶籍地址，或依情形不同）</li>
-      <li>連帶保證人還需要收到存證信函（副本或另寄一封）嗎？如果要，從第幾封開始？</li>
-      <li>如果要寄給連帶保證人，地址寄保證人的通訊地址嗎？</li>
-    </ol>
-    <textarea class="ans" data-save="ans-Q-065" placeholder="回覆…"></textarea>
-  </div>
-
   <div class="savenote" id="savenote"></div>
 </div>
 
